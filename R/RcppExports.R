@@ -5,6 +5,10 @@ completeSearchRcpp <- function(treeSample1R, treeSample2R, compLeafSetR, alphaR,
     .Call(`_ptwig_completeSearchRcpp`, treeSample1R, treeSample2R, compLeafSetR, alphaR, qR, tauR)
 }
 
+completeSearchRcppS <- function(treeSample1R, nSample1R, treeSample2R, nSample2R, compLeafSetR, alphaR, qR, tauR) {
+    .Call(`_ptwig_completeSearchRcppS`, treeSample1R, nSample1R, treeSample2R, nSample2R, compLeafSetR, alphaR, qR, tauR)
+}
+
 stableSearchRcpp <- function(treeSampleR, compLeafSetR, alphaR) {
     .Call(`_ptwig_stableSearchRcpp`, treeSampleR, compLeafSetR, alphaR)
 }

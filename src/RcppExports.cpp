@@ -26,6 +26,24 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// completeSearchRcppS
+CharacterVector completeSearchRcppS(CharacterVector treeSample1R, IntegerVector nSample1R, CharacterVector treeSample2R, IntegerVector nSample2R, CharacterVector compLeafSetR, double alphaR, double qR, double tauR);
+RcppExport SEXP _ptwig_completeSearchRcppS(SEXP treeSample1RSEXP, SEXP nSample1RSEXP, SEXP treeSample2RSEXP, SEXP nSample2RSEXP, SEXP compLeafSetRSEXP, SEXP alphaRSEXP, SEXP qRSEXP, SEXP tauRSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< CharacterVector >::type treeSample1R(treeSample1RSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type nSample1R(nSample1RSEXP);
+    Rcpp::traits::input_parameter< CharacterVector >::type treeSample2R(treeSample2RSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type nSample2R(nSample2RSEXP);
+    Rcpp::traits::input_parameter< CharacterVector >::type compLeafSetR(compLeafSetRSEXP);
+    Rcpp::traits::input_parameter< double >::type alphaR(alphaRSEXP);
+    Rcpp::traits::input_parameter< double >::type qR(qRSEXP);
+    Rcpp::traits::input_parameter< double >::type tauR(tauRSEXP);
+    rcpp_result_gen = Rcpp::wrap(completeSearchRcppS(treeSample1R, nSample1R, treeSample2R, nSample2R, compLeafSetR, alphaR, qR, tauR));
+    return rcpp_result_gen;
+END_RCPP
+}
 // stableSearchRcpp
 CharacterVector stableSearchRcpp(CharacterVector treeSampleR, CharacterVector compLeafSetR, double alphaR);
 RcppExport SEXP _ptwig_stableSearchRcpp(SEXP treeSampleRSEXP, SEXP compLeafSetRSEXP, SEXP alphaRSEXP) {
@@ -56,6 +74,7 @@ END_RCPP
 
 static const R_CallMethodDef CallEntries[] = {
     {"_ptwig_completeSearchRcpp", (DL_FUNC) &_ptwig_completeSearchRcpp, 6},
+    {"_ptwig_completeSearchRcppS", (DL_FUNC) &_ptwig_completeSearchRcppS, 8},
     {"_ptwig_stableSearchRcpp", (DL_FUNC) &_ptwig_stableSearchRcpp, 3},
     {"_ptwig_stableSearchRcppS", (DL_FUNC) &_ptwig_stableSearchRcppS, 4},
     {NULL, NULL, 0}
