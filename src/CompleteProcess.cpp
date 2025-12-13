@@ -102,6 +102,7 @@ CharacterVector completeSearchRcpp(CharacterVector treeSample1R,
     
 }
 
+// [[Rcpp::export]]
 CharacterVector completeSearchRcppS(CharacterVector treeSample1R,
                                  IntegerVector nSample1R,
                                  CharacterVector treeSample2R,
