@@ -10,19 +10,54 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
-// rcpp_hello_world
-List rcpp_hello_world();
-RcppExport SEXP _ptwig_rcpp_hello_world() {
+// completeSearchRcpp
+CharacterVector completeSearchRcpp(CharacterVector treeSample1R, CharacterVector treeSample2R, CharacterVector compLeafSetR, double alphaR, double qR, double tauR);
+RcppExport SEXP _ptwig_completeSearchRcpp(SEXP treeSample1RSEXP, SEXP treeSample2RSEXP, SEXP compLeafSetRSEXP, SEXP alphaRSEXP, SEXP qRSEXP, SEXP tauRSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    rcpp_result_gen = Rcpp::wrap(rcpp_hello_world());
+    Rcpp::traits::input_parameter< CharacterVector >::type treeSample1R(treeSample1RSEXP);
+    Rcpp::traits::input_parameter< CharacterVector >::type treeSample2R(treeSample2RSEXP);
+    Rcpp::traits::input_parameter< CharacterVector >::type compLeafSetR(compLeafSetRSEXP);
+    Rcpp::traits::input_parameter< double >::type alphaR(alphaRSEXP);
+    Rcpp::traits::input_parameter< double >::type qR(qRSEXP);
+    Rcpp::traits::input_parameter< double >::type tauR(tauRSEXP);
+    rcpp_result_gen = Rcpp::wrap(completeSearchRcpp(treeSample1R, treeSample2R, compLeafSetR, alphaR, qR, tauR));
+    return rcpp_result_gen;
+END_RCPP
+}
+// stableSearchRcpp
+CharacterVector stableSearchRcpp(CharacterVector treeSampleR, CharacterVector compLeafSetR, double alphaR);
+RcppExport SEXP _ptwig_stableSearchRcpp(SEXP treeSampleRSEXP, SEXP compLeafSetRSEXP, SEXP alphaRSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< CharacterVector >::type treeSampleR(treeSampleRSEXP);
+    Rcpp::traits::input_parameter< CharacterVector >::type compLeafSetR(compLeafSetRSEXP);
+    Rcpp::traits::input_parameter< double >::type alphaR(alphaRSEXP);
+    rcpp_result_gen = Rcpp::wrap(stableSearchRcpp(treeSampleR, compLeafSetR, alphaR));
+    return rcpp_result_gen;
+END_RCPP
+}
+// stableSearchRcppS
+CharacterVector stableSearchRcppS(CharacterVector treeSampleR, IntegerVector nSampleR, CharacterVector compLeafSetR, double alphaR);
+RcppExport SEXP _ptwig_stableSearchRcppS(SEXP treeSampleRSEXP, SEXP nSampleRSEXP, SEXP compLeafSetRSEXP, SEXP alphaRSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< CharacterVector >::type treeSampleR(treeSampleRSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type nSampleR(nSampleRSEXP);
+    Rcpp::traits::input_parameter< CharacterVector >::type compLeafSetR(compLeafSetRSEXP);
+    Rcpp::traits::input_parameter< double >::type alphaR(alphaRSEXP);
+    rcpp_result_gen = Rcpp::wrap(stableSearchRcppS(treeSampleR, nSampleR, compLeafSetR, alphaR));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_ptwig_rcpp_hello_world", (DL_FUNC) &_ptwig_rcpp_hello_world, 0},
+    {"_ptwig_completeSearchRcpp", (DL_FUNC) &_ptwig_completeSearchRcpp, 6},
+    {"_ptwig_stableSearchRcpp", (DL_FUNC) &_ptwig_stableSearchRcpp, 3},
+    {"_ptwig_stableSearchRcppS", (DL_FUNC) &_ptwig_stableSearchRcppS, 4},
     {NULL, NULL, 0}
 };
 
