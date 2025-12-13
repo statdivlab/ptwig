@@ -1,0 +1,5 @@
+useDynLib(ptwig, .registration=TRUE)
+importFrom(Rcpp, evalCpp)
+exportPattern("^[[:alpha:]]+")
+importFrom(ape, read.tree, write.tree)
+export(run_stable_search)
