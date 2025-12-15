@@ -4,7 +4,7 @@ Title: Phylogenetic Trees With Interpretable Guarantees
 Version: 0.0.1
 Date: 2025-12-13
 Authors@R: person("Maria","Valdez Cabrera", role = c("aut", "cre"), email = "mariavc@uw.edu")
-Description: More about what it does (maybe more than one line).
+Description: This package performs consensus tree construction from a tree Sample, with stability and False Discovery Rate guarantees.
 License: GPL (>= 2)
 Imports: Rcpp (>= 1.1.0)
 LinkingTo: Rcpp

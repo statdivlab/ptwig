@@ -1,4 +1,4 @@
-# ptwig
+# ptwig - **P**hylogenetic **T**rees **W**ith **I**nterpretable **G**uarantees
 
 `ptwig` is an `R` package for **stable and FDR-controlled inference on collections of phylogenetic trees**.  
 The package implements the algorithms described in
@@ -30,8 +30,9 @@ library(ptwig)
 
 ### Stable Search (Algorithm 1)
 
-The function `run_stable_search()` identifies stable trees from a collection
-of phylogenetic trees. Trees may be provided either as Newick strings or via a file (with a newick entry per line).
+The function `run_stable_search()` identifies stable trees from a collection 
+of phylogenetic trees. Trees are provided via newick-formatted strings. 
+The input may be given either as an array of strings or via a file (with a tree per line).
 
 
 **Example: using a file of Newick trees**
@@ -58,11 +59,29 @@ res <- run_stable_search(
 
 ### FDR-Controlled Search (Algorithms 1–3)
 
-The function `run_FDRcontrol_search()` performs stable search, subposet
-construction, and FDR-controlled inference.
+The function `run_FDRcontrol_search()` internally performs the stable search, subposet
+construction, and FDR-controlled inference, returning the trees with FDR control guarantees.
 It supports flexible input configurations, including automatic sample splitting.
 
+**Example: single file with specified sample splitting**
+
+The function allows for the user to specify how many trees are used for the stable search and subposet 
+construction through the parameter `n1`.
+
+``` r
+res <- run_FDRcontrol_search(
+  file = "trees.nwk",
+  alpha = 0.85,
+  q = 0.1,
+  tau = 0.95,
+  n1 = 60
+)
+```
+
 **Example: single file with automatic sample splitting**
+
+If `n1` is not provided, it automatically takes half the sample for the stable search and the other half for 
+the FDR-controlled inference. 
 
 ``` r
 res <- run_FDRcontrol_search(
