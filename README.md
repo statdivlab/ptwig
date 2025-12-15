@@ -1,7 +1,6 @@
 # ptwig 
 
----
-**P**hylogenetic **T**rees **W**ith **I**nterpretable **G**uarantees
+**P** hylogenetic **T** rees **W**ith **I**nterpretable **G**uarantees
 ---
 
 `ptwig` is an `R` package for **stable and FDR-controlled inference on collections of phylogenetic trees**.  
