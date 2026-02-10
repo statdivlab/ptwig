@@ -25,7 +25,9 @@ run_stable_search <- function(newicks = NULL, file = NULL, alpha, summarized = F
     trees <- ape::read.tree(file)
   } else {
     ## Parse Newick strings directly
-    trees <- lapply(newicks, ape::read.tree, text = TRUE)
+    trees <- lapply(newicks, function(x) ape::read.tree(text = x))
+    #lapply(newicks, ape::read.tree, text = TRUE)
+    
   }
   
   ## --- Normalize: unroot and remove edge lengths ---------------------------

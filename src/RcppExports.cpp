@@ -44,6 +44,53 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// computeFD
+int computeFD(CharacterVector treeR1, CharacterVector treeR2);
+RcppExport SEXP _ptwig_computeFD(SEXP treeR1SEXP, SEXP treeR2SEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< CharacterVector >::type treeR1(treeR1SEXP);
+    Rcpp::traits::input_parameter< CharacterVector >::type treeR2(treeR2SEXP);
+    rcpp_result_gen = Rcpp::wrap(computeFD(treeR1, treeR2));
+    return rcpp_result_gen;
+END_RCPP
+}
+// computeFDP
+float computeFDP(CharacterVector treeR1, CharacterVector treeR2);
+RcppExport SEXP _ptwig_computeFDP(SEXP treeR1SEXP, SEXP treeR2SEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< CharacterVector >::type treeR1(treeR1SEXP);
+    Rcpp::traits::input_parameter< CharacterVector >::type treeR2(treeR2SEXP);
+    rcpp_result_gen = Rcpp::wrap(computeFDP(treeR1, treeR2));
+    return rcpp_result_gen;
+END_RCPP
+}
+// computeRank
+int computeRank(CharacterVector treeR);
+RcppExport SEXP _ptwig_computeRank(SEXP treeRSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< CharacterVector >::type treeR(treeRSEXP);
+    rcpp_result_gen = Rcpp::wrap(computeRank(treeR));
+    return rcpp_result_gen;
+END_RCPP
+}
+// computeSimilarity
+int computeSimilarity(CharacterVector treeR1, CharacterVector treeR2);
+RcppExport SEXP _ptwig_computeSimilarity(SEXP treeR1SEXP, SEXP treeR2SEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< CharacterVector >::type treeR1(treeR1SEXP);
+    Rcpp::traits::input_parameter< CharacterVector >::type treeR2(treeR2SEXP);
+    rcpp_result_gen = Rcpp::wrap(computeSimilarity(treeR1, treeR2));
+    return rcpp_result_gen;
+END_RCPP
+}
 // stableSearchRcpp
 CharacterVector stableSearchRcpp(CharacterVector treeSampleR, CharacterVector compLeafSetR, double alphaR);
 RcppExport SEXP _ptwig_stableSearchRcpp(SEXP treeSampleRSEXP, SEXP compLeafSetRSEXP, SEXP alphaRSEXP) {
@@ -75,6 +122,10 @@ END_RCPP
 static const R_CallMethodDef CallEntries[] = {
     {"_ptwig_completeSearchRcpp", (DL_FUNC) &_ptwig_completeSearchRcpp, 6},
     {"_ptwig_completeSearchRcppS", (DL_FUNC) &_ptwig_completeSearchRcppS, 8},
+    {"_ptwig_computeFD", (DL_FUNC) &_ptwig_computeFD, 2},
+    {"_ptwig_computeFDP", (DL_FUNC) &_ptwig_computeFDP, 2},
+    {"_ptwig_computeRank", (DL_FUNC) &_ptwig_computeRank, 1},
+    {"_ptwig_computeSimilarity", (DL_FUNC) &_ptwig_computeSimilarity, 2},
     {"_ptwig_stableSearchRcpp", (DL_FUNC) &_ptwig_stableSearchRcpp, 3},
     {"_ptwig_stableSearchRcppS", (DL_FUNC) &_ptwig_stableSearchRcppS, 4},
     {NULL, NULL, 0}

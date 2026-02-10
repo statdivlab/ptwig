@@ -9,6 +9,22 @@ completeSearchRcppS <- function(treeSample1R, nSample1R, treeSample2R, nSample2R
     .Call(`_ptwig_completeSearchRcppS`, treeSample1R, nSample1R, treeSample2R, nSample2R, compLeafSetR, alphaR, qR, tauR)
 }
 
+computeFD <- function(treeR1, treeR2) {
+    .Call(`_ptwig_computeFD`, treeR1, treeR2)
+}
+
+computeFDP <- function(treeR1, treeR2) {
+    .Call(`_ptwig_computeFDP`, treeR1, treeR2)
+}
+
+computeRank <- function(treeR) {
+    .Call(`_ptwig_computeRank`, treeR)
+}
+
+computeSimilarity <- function(treeR1, treeR2) {
+    .Call(`_ptwig_computeSimilarity`, treeR1, treeR2)
+}
+
 stableSearchRcpp <- function(treeSampleR, compLeafSetR, alphaR) {
     .Call(`_ptwig_stableSearchRcpp`, treeSampleR, compLeafSetR, alphaR)
 }

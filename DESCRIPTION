@@ -8,3 +8,4 @@ Description: This package performs consensus tree construction from a tree Sampl
 License: GPL (>= 2)
 Imports: Rcpp (>= 1.1.0)
 LinkingTo: Rcpp
+RoxygenNote: 7.3.3
