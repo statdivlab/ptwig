@@ -26,7 +26,6 @@ run_stable_search <- function(newicks = NULL, file = NULL, alpha, summarized = F
   } else {
     ## Parse Newick strings directly
     trees <- lapply(newicks, function(x) ape::read.tree(text = x))
-    #lapply(newicks, ape::read.tree, text = TRUE)
     
   }
   

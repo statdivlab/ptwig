@@ -184,13 +184,17 @@ vector<pTree> coverTrees(pTree T, set<string> compLeaves){
             }
         }
         
-        bool AddLeafScheme[static_cast<int>(T.intSplits.size()) +1][static_cast<int>(T.intSplits.size())] ;
+        int mTint = T.intSplits.size();
         
-        for (int rn = 0; rn < static_cast<int>(T.intSplits.size()) +1; rn++){
-            for (int cn = 0; cn < static_cast<int>(T.intSplits.size()); cn++) {
-                AddLeafScheme[rn][cn] = false;
-            }
-        }
+        std::vector<std::vector<bool>> AddLeafScheme(mTint + 1, std::vector<bool>(mTint, false));
+        
+        //bool AddLeafScheme[static_cast<int>(T.intSplits.size()) +1][static_cast<int>(T.intSplits.size())] ;
+        
+        //for (int rn = 0; rn < mTint +1; rn++){
+        //    for (int cn = 0; cn < mTint; cn++) {
+        //        AddLeafScheme[rn][cn] = false;
+        //    }
+        //}
         
         //Dealing with "root" node in the tree (r)
         

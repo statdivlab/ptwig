@@ -5,6 +5,7 @@
 #include "stableSearch.h"
 #include "subPoset.h"
 #include "FDRSearch.h"
+#include "idNullCoveringPairsComputation.h"
 #include <iostream>
 #include <set>
 #include <queue>
@@ -27,10 +28,13 @@ using namespace Rcpp;
 using namespace std;
 
 // [[Rcpp::export]]
-CharacterVector completeSearchRcpp(CharacterVector treeSample1R,
+float nullCoveringProbComputation(CharacterVector treeStar,
+                                  CharacterVector treeSample1R,
                                  CharacterVector treeSample2R,
                                  CharacterVector compLeafSetR,
-                                 double alphaR, double qR, double tauR) {
+                                 double alphaR, double qR, double tauR, int B2) {
+    
+    pTree tStar = pTree(as<std::string>(treeStar));
     
     std::vector<pTree> treeSample1;
     treeSample1.reserve(treeSample1R.size());
@@ -81,34 +85,30 @@ CharacterVector completeSearchRcpp(CharacterVector treeSample1R,
     
     
     int stM = static_cast<int>(stTrees.size());
-    int B2 = static_cast<int>(treeSample2.size());
     int rank_anchor = floor((log(q) - log(stM) + B2*(tau-0.5)*(tau-0.5))/log(2));
     
     subPoset subPost = subPoset(stTrees, treeSample1, compLeafSet, rank_anchor);
     
-    vector<pTree> FDRTrees = FDRSearch(treeSample2, subPost, q);
+    subPost.print();
+    
+    float npProb = idNullCoveringPairsComputation(tStar, treeSample2, subPost);
+    
 
-    //
-    // 4. Convert vector<pTree> → CharacterVector
-    //
-    CharacterVector out(FDRTrees.size());
-    for (size_t i = 0; i < FDRTrees.size(); i++) {
-        mPhylo rP = mPhylo(FDRTrees[i]);
-        out[i] = rP.toNewick();
-    }
-
-    return out;
+    return npProb;
     
     
 }
 
 // [[Rcpp::export]]
-CharacterVector completeSearchRcppS(CharacterVector treeSample1R,
+float nullCoveringProbComputationS(CharacterVector treeStar,
+                                 CharacterVector treeSample1R,
                                  IntegerVector nSample1R,
                                  CharacterVector treeSample2R,
                                  IntegerVector nSample2R,
                                  CharacterVector compLeafSetR,
-                                 double alphaR, double qR, double tauR) {
+                                 double alphaR, double qR, double tauR, int B2) {
+    
+    pTree tStar = pTree(as<std::string>(treeStar));
     
     std::vector<pTree> treeSample1;
     treeSample1.reserve(treeSample1R.size());
@@ -170,22 +170,14 @@ CharacterVector completeSearchRcppS(CharacterVector treeSample1R,
     
     
     int stM = static_cast<int>(stTrees.size());
-    int B2 = std::accumulate(nSample2.begin(), nSample2.end(), 0);
     int rank_anchor = floor((log(q) - log(stM) + B2*(tau-0.5)*(tau-0.5))/log(2));
     
     subPoset subPost = subPoset(stTrees, treeSample1, nSample1, compLeafSet, rank_anchor);
     
-    vector<pTree> FDRTrees = FDRSearch(treeSample2, nSample2, subPost, q);
+    subPost.print();
+    
+    float npProb = idNullCoveringPairsComputation(tStar, treeSample2, nSample2, subPost);
 
-    //
-    // 4. Convert vector<pTree> → CharacterVector
-    //
-    CharacterVector out(FDRTrees.size());
-    for (size_t i = 0; i < FDRTrees.size(); i++) {
-        mPhylo rP = mPhylo(FDRTrees[i]);
-        out[i] = rP.toNewick();
-    }
-
-    return out;
+    return npProb;
     
 }

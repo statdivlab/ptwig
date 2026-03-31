@@ -125,7 +125,7 @@ subPoset::subPoset(vector<pTree> initT, vector<pTree> Sample, set<string> compLe
         int IndexMax  = -1;
         float MaxValueS = 0;
         float MaxValueL = 0;
-        float MaxValue  = 0;
+        //float MaxValue  = 0;
         int indx = 0;
         for (pTree V : AllV){
             double tempSum = 0;
@@ -148,10 +148,10 @@ subPoset::subPoset(vector<pTree> initT, vector<pTree> Sample, set<string> compLe
             indx++;
         }
         if (MaxValueL > MaxValueS){
-            MaxValue = MaxValueL;
+            //MaxValue = MaxValueL;
             IndexMax = IndexMaxL;
         } else {
-            MaxValue = MaxValueS;
+            //MaxValue = MaxValueS;
             IndexMax = IndexMaxS;
         }
 
@@ -555,7 +555,7 @@ subPoset::subPoset(vector<pTree> initT, vector<pTree> Sample, vector<int> nSampl
         int IndexMax  = -1;
         float MaxValueS = 0;
         float MaxValueL = 0;
-        float MaxValue  = 0;
+        //float MaxValue  = 0;
         int indx = 0;
         for (pTree V : AllV){
             double tempSum = 0;
@@ -580,10 +580,10 @@ subPoset::subPoset(vector<pTree> initT, vector<pTree> Sample, vector<int> nSampl
             indx++;
         }
         if (MaxValueL > MaxValueS){
-            MaxValue = MaxValueL;
+            //MaxValue = MaxValueL;
             IndexMax = IndexMaxL;
         } else {
-            MaxValue = MaxValueS;
+            //MaxValue = MaxValueS;
             IndexMax = IndexMaxS;
         }
 

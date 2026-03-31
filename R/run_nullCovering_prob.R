@@ -1,25 +1,28 @@
-#' Run FDR controled search
+#' Computing the probability of correctly identifying C null pairs
 #'
+#' @param tstar_newick Character vector of Newick string for the target tree (optional).
 #' @param newicks Character vector of Newick strings (optional)
 #' @param newicks1 Character vector of Newick strings for Stable Search (optional)
-#' @param newicks2 Character vector of Newick strings for FDR control Search (optional)
+#' @param newicks2 Character vector of Newick strings for probability computation (optional)
+#' @param tstar_file Path to a file containing Newick string for the target tree (optional)
 #' @param file Path to a file containing Newick trees (optional)
 #' @param file1 Path to a file containing Newick trees for Stable Search (optional)
-#' @param file2 Path to a file containing Newick trees for FDR control Search (optional)
+#' @param file2 Path to a file containing Newick trees for probability computation (optional)
 #' @param n1 Number of trees to be used for Stable Search (optional)
-#' @param random_subsampling Boolean indicating if the subsampling is to be made random 
+#' @param n2 Hypothetical size of the second sample, parameter needed to build the subPoset
+#' @param random_subsampling Boolean indicating if the subsampling is to be made random
 #' @param alpha Numeric value passed to Stable Search for stable threshold.
-#' @param q Numeric value passed to FDR control purposes.
+#' @param q Numeric value used in FDR control purposes, used in the construction of the subPoset.
 #' @param tau Extra value for subposet building.
 #' @param summarized Boolean factor indicating if the function is to be runned with a summarized version of the sample
 #'
-#' @return Output of completeSearchRcpp
+#' @return Output of nullCoveringProb
 #' @export
 #'
 #' @importFrom ape read.tree
-run_FDRcontrol_search <- function(newicks = NULL, newicks1 = NULL, newicks2 = NULL,
-                                  file = NULL, file1 = NULL, file2 = NULL, 
-                                  n1 = NULL,
+run_nullCovering_prob <- function(tstar_newick = NULL, newicks = NULL, newicks1 = NULL, newicks2 = NULL,
+                                  tstar_file = NULL, file = NULL, file1 = NULL, file2 = NULL, 
+                                  n1 = NULL, n2 = NULL,
                                   random_subsampling = FALSE,
                                   alpha = 0.85, q = 0.1, tau = 0.95, 
                                   summarized = FALSE) {
@@ -27,6 +30,10 @@ run_FDRcontrol_search <- function(newicks = NULL, newicks1 = NULL, newicks2 = NU
   ## --- Argument validation -------------------------------------------------
   
   # Define the six allowed conditions as logical variables
+  cond0.1 <- !is.null(tstar_newick) && is.null(tstar_file)
+  
+  cond0.2 <- is.null(tstar_newick) && !is.null(tstar_file)
+  
   cond1 <- !is.null(newicks) # (newicks != NULL)
   
   cond2 <- !is.null(newicks1) && !is.null(newicks2) # (newicks1 !=NULL && newicks2 != NULL)
@@ -40,10 +47,21 @@ run_FDRcontrol_search <- function(newicks = NULL, newicks1 = NULL, newicks2 = NU
   cond6 <- !is.null(file2) && !is.null(newicks1) # (file2 != NULL && newicks1 != NULL)
   
   # Create a vector of the conditions
+  conditions0 <- c(cond0.1, cond0.2)
   conditions <- c(cond1, cond2, cond3, cond4, cond5, cond6)
   
   # Count how many conditions are TRUE
+  num_true_conditions0 <- sum(conditions0)
   num_true_conditions <- sum(conditions)
+  
+  # Check if exactly one source for the target tree
+  
+  if(num_true_conditions0 != 1){
+      stop(
+        "You must provide the target tree in EXACTLY ONE of the following arguments:\n",
+        "1. as a newick string in tstar_newick or 2. as a file containing the newick string in tstar_file."
+      )
+  }
   
   # Check if exactly one condition is TRUE
   if (num_true_conditions != 1) {
@@ -75,6 +93,23 @@ run_FDRcontrol_search <- function(newicks = NULL, newicks1 = NULL, newicks2 = NU
   }
   
   ## --- Read trees from files (if provided) ---------------------------------
+  
+  if (cond0.1){
+    tree_star <- lapply(tstar_newick, function(x) ape::read.tree(text = x))
+  } else if (cond0.1){
+    if (!file.exists(tstar_file)) stop("File does not exist: ", tstar_file)
+    tree_star <- ape::read.tree(tstar_file)
+  }
+  
+  nt <- length(tree_star)
+  if (nt>1){ 
+    warning("You provided more than one target tree. Will use only the first in the list")
+    tree_star1 <- tree_star[1]
+  } else {
+    tree_star1 <- tree_star[[1]]
+  }
+  
+  
   if (cond1 || cond3){
     if (!is.null(file)) {
       if (!file.exists(file)) stop("File does not exist: ", file)
@@ -119,6 +154,10 @@ run_FDRcontrol_search <- function(newicks = NULL, newicks1 = NULL, newicks2 = NU
   
   
   ## --- Normalize: unroot and remove edge lengths ---------------------------
+  tree_star1 <- ape::unroot(tree_star1)
+  tree_star1$edge.length <- NULL
+  cleaned_treeStar <- ape::write.tree(phy = tree_star1)
+  
   trees1 <- lapply(trees1, function(tr) {
     # Unroot the tree
     if (!is.null(tr$root.edge) || !ape::is.rooted(tr)) {
@@ -190,20 +229,22 @@ run_FDRcontrol_search <- function(newicks = NULL, newicks1 = NULL, newicks2 = NU
     cleaned_newicks2 <- vapply(Unique_trees2, ape::write.tree, FUN.VALUE = character(1))
     
     ## --- Call your Rcpp backend ----------------------------------------------
-    res <- completeSearchRcppS(treeSample1R = cleaned_newicks1, nSample1R = Count_trees1, 
+    res <-  nullCoveringProbComputationS(treeStar = cleaned_treeStar,
+                               treeSample1R = cleaned_newicks1, nSample1R = Count_trees1, 
                                treeSample2R = cleaned_newicks2, nSample2R = Count_trees2, 
                                compLeafSetR = completeLeaveSet, 
-                               alphaR = alpha, qR = q, tauR = tau)
+                               alphaR = alpha, qR = q, tauR = tau, B2 = n2)
   } else {
     ## --- Write cleaned trees back to Newick strings ---------------------------
     cleaned_newicks1 <- vapply(trees1, ape::write.tree, FUN.VALUE = character(1))
     cleaned_newicks2 <- vapply(trees2, ape::write.tree, FUN.VALUE = character(1))
     
     ## --- Call your Rcpp backend ----------------------------------------------
-    res <- completeSearchRcpp(treeSample1R = cleaned_newicks1, 
-                               treeSample2R = cleaned_newicks2,
-                               compLeafSetR = completeLeaveSet, 
-                               alphaR = alpha, qR = q, tauR = tau)
+    res <- nullCoveringProbComputation(treeStar = cleaned_treeStar,
+                              treeSample1R = cleaned_newicks1, 
+                              treeSample2R = cleaned_newicks2,
+                              compLeafSetR = completeLeaveSet, 
+                              alphaR = alpha, qR = q, tauR = tau, B2 = n2)
   }
   
   return(res)
