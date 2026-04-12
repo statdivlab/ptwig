@@ -200,6 +200,7 @@ run_nullCovering_prob <- function(tstar_newick = NULL, newicks = NULL, newicks1 
         if (all.equal(tree, Top)){
           Found = TRUE;
           Count_trees1[i] = Count_trees1[i] + 1;
+          break
         }
       }
       if (!Found){
@@ -216,6 +217,7 @@ run_nullCovering_prob <- function(tstar_newick = NULL, newicks = NULL, newicks1 
         if (all.equal(tree, Top)){
           Found = TRUE;
           Count_trees2[i] = Count_trees2[i] + 1;
+          break
         }
       }
       if (!Found){

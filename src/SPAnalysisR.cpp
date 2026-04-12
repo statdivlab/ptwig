@@ -34,7 +34,7 @@ Rcpp::List SPAnalysisR(CharacterVector treeStar,
                                  CharacterVector treeSample2R,
                                  CharacterVector bigTreeSampleR,
                                  CharacterVector compLeafSetR,
-                                 double alphaR, double qR, double tauR) {
+                                 double alphaR, double qR, double tauR, double deltaR) {
     
     pTree tStar = pTree(as<std::string>(treeStar));
     
@@ -92,6 +92,7 @@ Rcpp::List SPAnalysisR(CharacterVector treeStar,
     float alpha = static_cast<float>(alphaR);
     float q = static_cast<float>(qR);
     float tau = static_cast<float>(tauR);
+    float delta = static_cast<float>(deltaR);
 
     //
     // 3. Call C++ function
@@ -112,14 +113,16 @@ Rcpp::List SPAnalysisR(CharacterVector treeStar,
     
     vector<string> subPosetTrees;
     vector<int> subPosetRanks;
+    vector<int> subPosetKappas;
     
     for (int k = 0; k < subPost.Poset.size(); k++){
         mPhylo rP = mPhylo(subPost.Poset.at(k).Tree);
         subPosetTrees.push_back(rP.toNewick());
         subPosetRanks.push_back(subPost.Poset.at(k).Tree.rank);
+        subPosetKappas.push_back(subPost.Poset.at(k).kappa);
     }
     
-    subPosetOutput allResults = SPanalisys(tStar, treeSample2, bigTreeSample, subPost);
+    subPosetOutput allResults = SPanalisys(tStar, treeSample2, bigTreeSample, subPost, q, delta);
     
     // Convert edges: split pairs into two parallel integer vectors
     int nEdges = allResults.edges.size();
@@ -132,6 +135,7 @@ Rcpp::List SPAnalysisR(CharacterVector treeStar,
     return Rcpp::List::create(
         Rcpp::Named("subPosetTrees")       = Rcpp::wrap(subPosetTrees),
         Rcpp::Named("subPosetRanks")       = Rcpp::wrap(subPosetRanks),
+        Rcpp::Named("subPosetKappas")       = Rcpp::wrap(subPosetKappas),
         Rcpp::Named("CoveringPairsLower")  = edgeFrom,
         Rcpp::Named("CoveringPairsUpper")  = edgeTo,
         Rcpp::Named("nullCovering")     = Rcpp::wrap(allResults.nullCovering),
@@ -139,10 +143,132 @@ Rcpp::List SPAnalysisR(CharacterVector treeStar,
         Rcpp::Named("coveringVariance") = Rcpp::wrap(allResults.coveringVariance),
         Rcpp::Named("nullCoveringProb") = allResults.nullCoveringProb,
         Rcpp::Named("minLower")         = allResults.minLower,
-        Rcpp::Named("minUpper")         = allResults.minUpper
+        Rcpp::Named("minUpper")         = allResults.minUpper,
+        Rcpp::Named("RademacherComplexity") = allResults.RademacherComplex,
+        Rcpp::Named("kappaThresholds05") = Rcpp::wrap(allResults.kappa_Ts_05),
+        Rcpp::Named("kappaThresholdsP") = Rcpp::wrap(allResults.kappa_Ts_p),
+        Rcpp::Named("radThresholds05") = Rcpp::wrap(allResults.rad_Ts_05),
+        Rcpp::Named("radThresholdsP") = Rcpp::wrap(allResults.rad_Ts_p)
     );
     
 }
+
+// [[Rcpp::export]]
+Rcpp::List SPAnalysisR2(CharacterVector treeStar,
+                                  CharacterVector treeSample1R,
+                                 CharacterVector treeSample2R,
+                                 CharacterVector bigTreeSampleR,
+                                 CharacterVector compLeafSetR,
+                                 int MtR, int rbR, double qR, double deltaR) {
+    
+    pTree tStar = pTree(as<std::string>(treeStar));
+    
+    std::vector<pTree> treeSample1;
+    treeSample1.reserve(treeSample1R.size());
+
+    for (int i = 0; i < treeSample1R.size(); i++) {
+        if (treeSample1R[i] == NA_STRING)
+            stop("treeSample cannot contain NA.");
+        treeSample1.emplace_back(
+            pTree(as<std::string>(treeSample1R[i]))
+        );
+    }
+    
+    int B2 = treeSample2R.size();
+    
+    std::vector<pTree> treeSample2;
+    treeSample2.reserve(B2);
+
+    for (int i = 0; i < B2; i++) {
+        if (treeSample2R[i] == NA_STRING)
+            stop("treeSample cannot contain NA.");
+        treeSample2.emplace_back(
+            pTree(as<std::string>(treeSample2R[i]))
+        );
+    }
+    
+    
+    std::vector<pTree> bigTreeSample;
+    bigTreeSample.reserve(bigTreeSampleR.size());
+
+    for (int i = 0; i < bigTreeSampleR.size(); i++) {
+        if (bigTreeSampleR[i] == NA_STRING)
+            stop("treeSample cannot contain NA.");
+        bigTreeSample.emplace_back(
+            pTree(as<std::string>(bigTreeSampleR[i]))
+        );
+    }
+    
+
+    //
+    // 2. Convert compLeafSetR → set<string>
+    //
+    std::set<std::string> compLeafSet;
+    for (int i = 0; i < compLeafSetR.size(); i++) {
+        if (compLeafSetR[i] == NA_STRING)
+            stop("compLeafSet cannot contain NA.");
+        compLeafSet.insert(as<std::string>(compLeafSetR[i]));
+    }
+    
+    //
+    // 2.1 Converting the integers
+    //
+    
+    int Mt = static_cast<int>(MtR);
+    
+    int rb = static_cast<int>(rbR);
+    
+    float q = static_cast<float>(qR);
+    
+    float delta = static_cast<float>(deltaR);
+
+    //
+    // 3. Call C++ function
+    //
+    
+    subPoset subPost = subPoset(treeSample1, compLeafSet, Mt, rb);
+    
+    vector<string> subPosetTrees;
+    vector<int> subPosetRanks;
+    vector<int> subPosetKappas;
+    
+    for (int k = 0; k < subPost.Poset.size(); k++){
+        mPhylo rP = mPhylo(subPost.Poset.at(k).Tree);
+        subPosetTrees.push_back(rP.toNewick());
+        subPosetRanks.push_back(subPost.Poset.at(k).Tree.rank);
+        subPosetKappas.push_back(subPost.Poset.at(k).kappa);
+    }
+    
+    subPosetOutput allResults = SPanalisys(tStar, treeSample2, bigTreeSample, subPost, q, delta);
+    
+    // Convert edges: split pairs into two parallel integer vectors
+    int nEdges = allResults.edges.size();
+    Rcpp::IntegerVector edgeFrom(nEdges), edgeTo(nEdges);
+    for (int i = 0; i < nEdges; i++) {
+        edgeFrom[i] = allResults.edges[i].first;
+        edgeTo[i]   = allResults.edges[i].second;
+    }
+    
+    return Rcpp::List::create(
+        Rcpp::Named("subPosetTrees")       = Rcpp::wrap(subPosetTrees),
+        Rcpp::Named("subPosetRanks")       = Rcpp::wrap(subPosetRanks),
+        Rcpp::Named("subPosetKappas")       = Rcpp::wrap(subPosetKappas),
+        Rcpp::Named("CoveringPairsLower")  = edgeFrom,
+        Rcpp::Named("CoveringPairsUpper")  = edgeTo,
+        Rcpp::Named("nullCovering")     = Rcpp::wrap(allResults.nullCovering),
+        Rcpp::Named("coveringMeans")    = Rcpp::wrap(allResults.coveringMean),
+        Rcpp::Named("coveringVariance") = Rcpp::wrap(allResults.coveringVariance),
+        Rcpp::Named("nullCoveringProb") = allResults.nullCoveringProb,
+        Rcpp::Named("minLower")         = allResults.minLower,
+        Rcpp::Named("minUpper")         = allResults.minUpper,
+        Rcpp::Named("RademacherComplexity") = allResults.RademacherComplex,
+        Rcpp::Named("kappaThresholds05") = Rcpp::wrap(allResults.kappa_Ts_05),
+        Rcpp::Named("kappaThresholdsP") = Rcpp::wrap(allResults.kappa_Ts_p),
+        Rcpp::Named("radThresholds05") = Rcpp::wrap(allResults.rad_Ts_05),
+        Rcpp::Named("radThresholdsP") = Rcpp::wrap(allResults.rad_Ts_p)
+    );
+}
+
 
 // [[Rcpp::export]]
 Rcpp::List SPAnalysisRS(CharacterVector treeStar,
@@ -153,7 +279,7 @@ Rcpp::List SPAnalysisRS(CharacterVector treeStar,
                                  CharacterVector bigTreeSampleR,
                                  IntegerVector nBSampleR,
                                  CharacterVector compLeafSetR,
-                                 double alphaR, double qR, double tauR) {
+                                 double alphaR, double qR, double tauR, double deltaR) {
     
     pTree tStar = pTree(as<std::string>(treeStar));
     
@@ -228,6 +354,7 @@ Rcpp::List SPAnalysisRS(CharacterVector treeStar,
     float alpha = static_cast<float>(alphaR);
     float q = static_cast<float>(qR);
     float tau = static_cast<float>(tauR);
+    float delta = static_cast<float>(deltaR);
 
     //
     // 3. Call C++ function
@@ -248,14 +375,16 @@ Rcpp::List SPAnalysisRS(CharacterVector treeStar,
     
     vector<string> subPosetTrees;
     vector<int> subPosetRanks;
+    vector<int> subPosetKappas;
     
     for (int k = 0; k < subPost.Poset.size(); k++){
         mPhylo rP = mPhylo(subPost.Poset.at(k).Tree);
         subPosetTrees.push_back(rP.toNewick());
         subPosetRanks.push_back(subPost.Poset.at(k).Tree.rank);
+        subPosetKappas.push_back(subPost.Poset.at(k).kappa);
     }
     
-    subPosetOutput allResults = SPanalisys(tStar, treeSample2, nSample2, bigTreeSample, nBSample, subPost);
+    subPosetOutput allResults = SPanalisys(tStar, treeSample2, nSample2, bigTreeSample, nBSample, subPost,  q, delta);
     
     // Convert edges: split pairs into two parallel integer vectors
     int nEdges = allResults.edges.size();
@@ -268,6 +397,7 @@ Rcpp::List SPAnalysisRS(CharacterVector treeStar,
     return Rcpp::List::create(
         Rcpp::Named("subPosetTrees")       = Rcpp::wrap(subPosetTrees),
         Rcpp::Named("subPosetRanks")       = Rcpp::wrap(subPosetRanks),
+        Rcpp::Named("subPosetKappas")       = Rcpp::wrap(subPosetKappas),
         Rcpp::Named("CoveringPairsLower")  = edgeFrom,
         Rcpp::Named("CoveringPairsUpper")  = edgeTo,
         Rcpp::Named("nullCovering")     = Rcpp::wrap(allResults.nullCovering),
@@ -275,7 +405,148 @@ Rcpp::List SPAnalysisRS(CharacterVector treeStar,
         Rcpp::Named("coveringVariance") = Rcpp::wrap(allResults.coveringVariance),
         Rcpp::Named("nullCoveringProb") = allResults.nullCoveringProb,
         Rcpp::Named("minLower")         = allResults.minLower,
-        Rcpp::Named("minUpper")         = allResults.minUpper
+        Rcpp::Named("minUpper")         = allResults.minUpper,
+        Rcpp::Named("RademacherComplexity") = allResults.RademacherComplex,
+        Rcpp::Named("kappaThresholds05") = Rcpp::wrap(allResults.kappa_Ts_05),
+        Rcpp::Named("kappaThresholdsP") = Rcpp::wrap(allResults.kappa_Ts_p),
+        Rcpp::Named("radThresholds05") = Rcpp::wrap(allResults.rad_Ts_05),
+        Rcpp::Named("radThresholdsP") = Rcpp::wrap(allResults.rad_Ts_p)
     );
     
 }
+
+// [[Rcpp::export]]
+Rcpp::List SPAnalysisR2S(CharacterVector treeStar,
+                                 CharacterVector treeSample1R,
+                                 IntegerVector nSample1R,
+                                 CharacterVector treeSample2R,
+                                 IntegerVector nSample2R,
+                                 CharacterVector bigTreeSampleR,
+                                 IntegerVector nBSampleR,
+                                 CharacterVector compLeafSetR,
+                                 int MtR, int rbR, double qR, double deltaR) {
+    
+    pTree tStar = pTree(as<std::string>(treeStar));
+    
+    std::vector<pTree> treeSample1;
+    treeSample1.reserve(treeSample1R.size());
+
+    for (int i = 0; i < treeSample1R.size(); i++) {
+        if (treeSample1R[i] == NA_STRING)
+            stop("treeSample cannot contain NA.");
+        treeSample1.emplace_back(
+            pTree(as<std::string>(treeSample1R[i]))
+        );
+    }
+    
+    
+    std::vector<pTree> treeSample2;
+    treeSample2.reserve(treeSample2R.size());
+
+    for (int i = 0; i < treeSample2R.size(); i++) {
+        if (treeSample2R[i] == NA_STRING)
+            stop("treeSample cannot contain NA.");
+        treeSample2.emplace_back(
+            pTree(as<std::string>(treeSample2R[i]))
+        );
+    }
+    
+    std::vector<pTree> bigTreeSample;
+    bigTreeSample.reserve(bigTreeSampleR.size());
+
+    for (int i = 0; i < bigTreeSampleR.size(); i++) {
+        if (bigTreeSampleR[i] == NA_STRING)
+            stop("treeSample cannot contain NA.");
+        bigTreeSample.emplace_back(
+            pTree(as<std::string>(bigTreeSampleR[i]))
+        );
+    }
+    
+    std::vector<int> nSample1;
+    
+    for (int i = 0; i < nSample1R.size(); i++){
+        nSample1.push_back(static_cast<int>(nSample1R[i]));
+    }
+    
+    std::vector<int> nSample2;
+    
+    for (int i = 0; i < nSample2R.size(); i++){
+        nSample2.push_back(static_cast<int>(nSample2R[i]));
+    }
+    
+    std::vector<int> nBSample;
+    
+    for (int i = 0; i < nBSampleR.size(); i++){
+        nBSample.push_back(static_cast<int>(nBSampleR[i]));
+    }
+    
+    //
+    // 2. Convert compLeafSetR → set<string>
+    //
+    std::set<std::string> compLeafSet;
+    for (int i = 0; i < compLeafSetR.size(); i++) {
+        if (compLeafSetR[i] == NA_STRING)
+            stop("compLeafSet cannot contain NA.");
+        compLeafSet.insert(as<std::string>(compLeafSetR[i]));
+    }
+    
+    //
+    // 2.1 Converting the integers
+    //
+    
+    int Mt = static_cast<int>(MtR);
+    
+    int rb = static_cast<int>(rbR);
+    
+    float q = static_cast<float>(qR);
+    
+    float delta = static_cast<float>(deltaR);
+
+    //
+    // 3. Call C++ function
+    //
+    
+    subPoset subPost = subPoset(treeSample1, nSample1, compLeafSet, Mt, rb);
+    
+    vector<string> subPosetTrees;
+    vector<int> subPosetRanks;
+    vector<int> subPosetKappas;
+    
+    for (int k = 0; k < subPost.Poset.size(); k++){
+        mPhylo rP = mPhylo(subPost.Poset.at(k).Tree);
+        subPosetTrees.push_back(rP.toNewick());
+        subPosetRanks.push_back(subPost.Poset.at(k).Tree.rank);
+        subPosetKappas.push_back(subPost.Poset.at(k).kappa);
+    }
+    
+    subPosetOutput allResults = SPanalisys(tStar, treeSample2, nSample2, bigTreeSample, nBSample, subPost,  q, delta);
+    
+    // Convert edges: split pairs into two parallel integer vectors
+    int nEdges = allResults.edges.size();
+    Rcpp::IntegerVector edgeFrom(nEdges), edgeTo(nEdges);
+    for (int i = 0; i < nEdges; i++) {
+        edgeFrom[i] = allResults.edges[i].first;
+        edgeTo[i]   = allResults.edges[i].second;
+    }
+    
+    return Rcpp::List::create(
+        Rcpp::Named("subPosetTrees")       = Rcpp::wrap(subPosetTrees),
+        Rcpp::Named("subPosetRanks")       = Rcpp::wrap(subPosetRanks),
+        Rcpp::Named("subPosetKappas")       = Rcpp::wrap(subPosetKappas),
+        Rcpp::Named("CoveringPairsLower")  = edgeFrom,
+        Rcpp::Named("CoveringPairsUpper")  = edgeTo,
+        Rcpp::Named("nullCovering")     = Rcpp::wrap(allResults.nullCovering),
+        Rcpp::Named("coveringMeans")    = Rcpp::wrap(allResults.coveringMean),
+        Rcpp::Named("coveringVariance") = Rcpp::wrap(allResults.coveringVariance),
+        Rcpp::Named("nullCoveringProb") = allResults.nullCoveringProb,
+        Rcpp::Named("minLower")         = allResults.minLower,
+        Rcpp::Named("minUpper")         = allResults.minUpper,
+        Rcpp::Named("RademacherComplexity") = allResults.RademacherComplex,
+        Rcpp::Named("kappaThresholds05") = Rcpp::wrap(allResults.kappa_Ts_05),
+        Rcpp::Named("kappaThresholdsP") = Rcpp::wrap(allResults.kappa_Ts_p),
+        Rcpp::Named("radThresholds05") = Rcpp::wrap(allResults.rad_Ts_05),
+        Rcpp::Named("radThresholdsP") = Rcpp::wrap(allResults.rad_Ts_p)
+    );
+    
+}
+

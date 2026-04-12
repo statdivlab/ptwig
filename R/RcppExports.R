@@ -9,12 +9,20 @@ completeSearchRcppS <- function(treeSample1R, nSample1R, treeSample2R, nSample2R
     .Call(`_ptwig_completeSearchRcppS`, treeSample1R, nSample1R, treeSample2R, nSample2R, compLeafSetR, alphaR, qR, tauR)
 }
 
-SPAnalysisR <- function(treeStar, treeSample1R, treeSample2R, bigTreeSampleR, compLeafSetR, alphaR, qR, tauR) {
-    .Call(`_ptwig_SPAnalysisR`, treeStar, treeSample1R, treeSample2R, bigTreeSampleR, compLeafSetR, alphaR, qR, tauR)
+SPAnalysisR <- function(treeStar, treeSample1R, treeSample2R, bigTreeSampleR, compLeafSetR, alphaR, qR, tauR, deltaR) {
+    .Call(`_ptwig_SPAnalysisR`, treeStar, treeSample1R, treeSample2R, bigTreeSampleR, compLeafSetR, alphaR, qR, tauR, deltaR)
 }
 
-SPAnalysisRS <- function(treeStar, treeSample1R, nSample1R, treeSample2R, nSample2R, bigTreeSampleR, nBSampleR, compLeafSetR, alphaR, qR, tauR) {
-    .Call(`_ptwig_SPAnalysisRS`, treeStar, treeSample1R, nSample1R, treeSample2R, nSample2R, bigTreeSampleR, nBSampleR, compLeafSetR, alphaR, qR, tauR)
+SPAnalysisR2 <- function(treeStar, treeSample1R, treeSample2R, bigTreeSampleR, compLeafSetR, MtR, rbR, qR, deltaR) {
+    .Call(`_ptwig_SPAnalysisR2`, treeStar, treeSample1R, treeSample2R, bigTreeSampleR, compLeafSetR, MtR, rbR, qR, deltaR)
+}
+
+SPAnalysisRS <- function(treeStar, treeSample1R, nSample1R, treeSample2R, nSample2R, bigTreeSampleR, nBSampleR, compLeafSetR, alphaR, qR, tauR, deltaR) {
+    .Call(`_ptwig_SPAnalysisRS`, treeStar, treeSample1R, nSample1R, treeSample2R, nSample2R, bigTreeSampleR, nBSampleR, compLeafSetR, alphaR, qR, tauR, deltaR)
+}
+
+SPAnalysisR2S <- function(treeStar, treeSample1R, nSample1R, treeSample2R, nSample2R, bigTreeSampleR, nBSampleR, compLeafSetR, MtR, rbR, qR, deltaR) {
+    .Call(`_ptwig_SPAnalysisR2S`, treeStar, treeSample1R, nSample1R, treeSample2R, nSample2R, bigTreeSampleR, nBSampleR, compLeafSetR, MtR, rbR, qR, deltaR)
 }
 
 computeFD <- function(treeR1, treeR2) {
@@ -31,6 +39,10 @@ computeRank <- function(treeR) {
 
 computeSimilarity <- function(treeR1, treeR2) {
     .Call(`_ptwig_computeSimilarity`, treeR1, treeR2)
+}
+
+computeNewSubposet <- function(treeSampleR, nSampleR, compLeafSetR, MtR, rbR) {
+    .Call(`_ptwig_computeNewSubposet`, treeSampleR, nSampleR, compLeafSetR, MtR, rbR)
 }
 
 nullCoveringProbComputation <- function(treeStar, treeSample1R, treeSample2R, compLeafSetR, alphaR, qR, tauR, B2) {

@@ -32,7 +32,22 @@ float Stability(vector<pTree> treeSample, float w, pTree V, Split s){
     float Sum = 0;
     
     for (pTree T : treeSample){
-        if ((rho(V, T) > rho(U, T)) > 0){
+        if ((rho(V, T) - rho(U, T)) > 0){
+            Sum++;
+        }
+    }
+    
+    return Sum/K;
+}
+
+float Stability(vector<pTree> treeSample, pTree V, Split s, const vector<float>& rhoV, int K){
+    
+    pTree U = V.Remove(s);
+    
+    float Sum = 0;
+    
+    for (int i = 0; i < K; i++){
+        if ((rhoV[i] - rho(U, treeSample[i])) > 0){
             Sum++;
         }
     }
@@ -49,10 +64,25 @@ float Stability(vector<pTree> treeSample, vector<int> nSample, float w, pTree V,
     
     int curIndx = 0;
     for (pTree T : treeSample){
-        if ((rho(V, T) > rho(U, T)) > 0){
+        if ((rho(V, T) - rho(U, T)) > 0){
             Sum += nSample.at(curIndx);
         }
         curIndx++;
+    }
+    
+    return Sum/K;
+}
+
+float Stability(vector<pTree> treeSample, vector<int> nSample, pTree V, Split s, const vector<float>& rhoV, int K){
+    
+    pTree U = V.Remove(s);
+    
+    float Sum = 0;
+    
+    for (int i = 0; i < treeSample.size(); i++){
+        if ((rhoV[i] - rho(U, treeSample[i])) > 0){
+            Sum += nSample.at(i);
+        }
     }
     
     return Sum/K;
@@ -65,7 +95,21 @@ float Stability(vector<pTree> treeSample, float w, pTree V, string a){
     float Sum = 0;
     
     for (pTree T : treeSample){
-        if ((rho(V, T) > rho(U, T)) > 0){
+        if ((rho(V, T) - rho(U, T)) > 0){
+            Sum++;
+        }
+    }
+    
+    return Sum/K;
+}
+
+float Stability(vector<pTree> treeSample, pTree V, string a, const vector<float>& rhoV, int K){
+    pTree U = V.Remove(a);
+    
+    float Sum = 0;
+    
+    for (int i = 0; i < K; i++){
+        if ((rhoV[i] - rho(U, treeSample[i])) > 0){
             Sum++;
         }
     }
@@ -81,10 +125,25 @@ float Stability(vector<pTree> treeSample, vector<int> nSample, float w, pTree V,
     
     int curIndx = 0;
     for (pTree T : treeSample){
-        if ((rho(V, T) > rho(U, T)) > 0){
+        if ((rho(V, T) - rho(U, T)) > 0){
             Sum += nSample.at(curIndx);
         }
         curIndx++;
+    }
+    
+    return Sum/K;
+}
+
+float Stability(vector<pTree> treeSample, vector<int> nSample, pTree V, string a, const vector<float>& rhoV, int K){
+    
+    pTree U = V.Remove(a);
+    
+    float Sum = 0;
+    
+    for (int i = 0; i < treeSample.size(); i++){
+        if ((rhoV[i] - rho(U, treeSample[i])) > 0){
+            Sum += nSample.at(i);
+        }
     }
     
     return Sum/K;
@@ -126,6 +185,26 @@ float MinimumStability(vector<pTree> treeSample, float w, pTree V){
             Result = Sum/K;
         }
     }
+    
+    return Result;
+}
+
+float MinimumStability(vector<pTree> treeSample,
+                       const vector<float>& rhoV, // precomputed rho(V, Z)
+                       pTree V, int K){
+    float Result = 1.0f;
+    
+    auto checkFeature = [&](pTree U_minus) {
+        float Sum = 0;
+        for (int i = 0; i < K; i++) {
+            if (rhoV[i] > rho(U_minus, treeSample[i]))
+                Sum++;
+        }
+        Result = min(Result, Sum / K);
+    };
+    
+    for (const string& a : V.leafSet)    checkFeature(V.Remove(a));
+    for (const Split&  s : V.intSplits)  checkFeature(V.Remove(s));
     
     return Result;
 }
@@ -174,6 +253,26 @@ float MinimumStability(vector<pTree> treeSample, vector<int> nSample, float w, p
     return Result;
 }
 
+float MinimumStability(vector<pTree>& treeSample, vector<int>& nSample,
+                       const vector<float>& rhoV,   // precomputed rho(V, Z)
+                       pTree V, int K) {
+    float Result = 1.0f;
+
+    auto checkFeature = [&](pTree U_minus) {
+        float Sum = 0;
+        for (int i = 0; i < treeSample.size(); i++) {
+            if (rhoV[i] > rho(U_minus, treeSample[i]))
+                Sum += nSample[i];
+        }
+        Result = min(Result, Sum / K);
+    };
+
+    for (const string& a : V.leafSet)    checkFeature(V.Remove(a));
+    for (const Split&  s : V.intSplits)  checkFeature(V.Remove(s));
+
+    return Result;
+}
+
 vector<pTree> stableSearch(vector<pTree> treeSample, set<string> compLeafSet, float alpha){
     
     vector<pTree> CollectionTrees;
@@ -184,114 +283,151 @@ vector<pTree> stableSearch(vector<pTree> treeSample, set<string> compLeafSet, fl
     int Count = 0;
     int highRank = 0;
     
+    // --- Fix 3: visited set to prevent cycles ---
+    set<string> visited;
+
+    // --- Fix 1: cache rho(U, Z) — recomputed only when U changes ---
+    vector<float> rhoU(B);
+    for (int i = 0; i < B; i++)
+        rhoU[i] = rho(U, treeSample[i]);
+    
     while (true) {
         
         vector<pTree> AllV = coverTrees(U, compLeafSet);
         
-        auto rd = std::random_device {};
-        auto rng = std::default_random_engine { rd() };
-        shuffle(begin(AllV), std::end(AllV), rng);
-        
-        //Version where maximal value is found.
-        
-        int IndexMaxS = -1;
-        int IndexMaxL = -1;
-        int IndexMax  = -1;
-        float MaxValueS = 0;
-        float MaxValueL = 0;
+        auto rd  = std::random_device{};
+        auto rng = std::default_random_engine{ rd() };
+        shuffle(begin(AllV), end(AllV), rng);
+
+        // --- Fix 2: find best candidate, saving its rhoV as we go ---
+        int   IndexMax  = -1;
         float MaxValue  = 0;
-        int indx = 0;
-        for (pTree V : AllV){
+        vector<float> bestRhoV(B);
+
+        // Separate trackers for large/small leaf set tiebreak (preserved from original)
+        int   IndexMaxS = -1, IndexMaxL = -1;
+        float MaxValueS = 0,  MaxValueL = 0;
+        vector<float> bestRhoVS(B), bestRhoVL(B);
+        
+        for (int indx = 0; indx < (int)AllV.size(); indx++){
+            const pTree& V = AllV[indx];
+
+            // Compute rho(V, Z) once, reuse for score and later for MinStab
+            vector<float> rhoV(B);
             double tempSum = 0;
-            for (pTree Z : treeSample){
-                if ((rho(V, Z) - rho(U, Z)) > 0){
+            for (int i = 0; i < B; i++) {
+                rhoV[i] = rho(V, treeSample[i]);
+                if (rhoV[i] - rhoU[i] > 0)
                     tempSum++;
-                }
             }
-            if ((V.leafSet.size() > U.leafSet.size()) && (V.leafSet.size()>4)){
-                if ((tempSum/B) > MaxValueL){
-                    MaxValueL = tempSum/B;
+
+            float score = (float)(tempSum / B);
+
+            if ((V.leafSet.size() > U.leafSet.size()) && (V.leafSet.size() > 4)) {
+                if (score > MaxValueL) {
+                    MaxValueL = score;
                     IndexMaxL = indx;
+                    bestRhoVL = rhoV;
                 }
             } else {
-                if ((tempSum/B) > MaxValueS){
-                    MaxValueS = tempSum/B;
+                if (score > MaxValueS) {
+                    MaxValueS = score;
                     IndexMaxS = indx;
+                    bestRhoVS = rhoV;
                 }
             }
-            indx++;
         }
-        if (MaxValueL > MaxValueS){
-            MaxValue = MaxValueL;
-            IndexMax = IndexMaxL;
+        if (MaxValueL > MaxValueS) {
+            MaxValue  = MaxValueL;
+            IndexMax  = IndexMaxL;
+            bestRhoV  = bestRhoVL;
         } else {
-            MaxValue = MaxValueS;
-            IndexMax = IndexMaxS;
+            MaxValue  = MaxValueS;
+            IndexMax  = IndexMaxS;
+            bestRhoV  = bestRhoVS;
         }
+
         
         pTree V = AllV.at(IndexMax);
-        
-        
-        if ((RecentlyRemoved) && (MaxValue < alpha)){
+
+        if (RecentlyRemoved && MaxValue < alpha)
             break;
-        }
-        
+
         RecentlyRemoved = false;
         
-        if (MaxValue < alpha){
-            if((V.leafSet.size() > U.leafSet.size()) && (V.returnRank()>1)){
-                for (string a : U.leafSet){
-                    if (Stability(treeSample, 1.0, V, a) < alpha){
-                        V = V.Remove(a);
-                        RecentlyRemoved = true;
-                    }
-                }
-                set<Split> FirstSplits = V.intSplits;
-                for (Split s : FirstSplits){
-                    Split s2 = s.TDR(V.leafSet);
-                    if (s2.isInternal()){
-                        if (Stability(treeSample, 1.0, V, s2) < alpha){
-                            V = V.Remove(s2);
+        // --- Sequential removal block ---
+        // Each time V is modified, bestRhoV is recomputed for the new V
+        if (MaxValue < alpha) {
+
+            // Helper lambda: recompute rhoV for current V
+            auto recomputeRhoV = [&]() {
+                for (int i = 0; i < B; i++)
+                    bestRhoV[i] = rho(V, treeSample[i]);
+            };
+
+            auto tryRemoveLeaves = [&](const set<string>& leaves) {
+                for (const string& a : leaves) {
+                    // Only attempt if leaf still present after prior removals
+                    if (V.leafSet.count(a)) {
+                        if (Stability(treeSample, V, a, bestRhoV, B) < alpha) {
+                            V = V.Remove(a);
+                            recomputeRhoV();   // V changed — cache is stale
                             RecentlyRemoved = true;
                         }
                     }
                 }
+            };
+
+            auto tryRemoveSplits = [&](const set<Split>& splits) {
+                for (Split s : splits) {
+                    Split s2 = s.TDR(V.leafSet);
+                    if (s2.isInternal()) {
+                        if (Stability(treeSample, V, s2, bestRhoV, B) < alpha) {
+                            V = V.Remove(s2);
+                            recomputeRhoV();   // V changed — cache is stale
+                            RecentlyRemoved = true;
+                        }
+                    }
+                }
+            };
+
+            if ((V.leafSet.size() > U.leafSet.size()) && (V.returnRank() > 1)) {
+                tryRemoveLeaves(U.leafSet);
+                tryRemoveSplits(V.intSplits);   // use V.intSplits as in original
             } else {
-                for (string a : U.leafSet){
-                    if (Stability(treeSample, 1.0, V, a) < alpha){
-                        V = V.Remove(a);
-                        RecentlyRemoved = true;
-                    }
-                }
-                set<Split> FirstSplits = U.intSplits;
-                for (Split s : FirstSplits){
-                    Split s2 = s.TDR(V.leafSet);
-                    if (s2.isInternal()){
-                        if (Stability(treeSample, 1.0, V, s2) < alpha){
-                            V = V.Remove(s2);
-                            RecentlyRemoved = true;
-                        }
-                    }
-                }
+                tryRemoveLeaves(U.leafSet);
+                tryRemoveSplits(U.intSplits);   // use U.intSplits as in original
             }
         }
-        
-        if (MinimumStability(treeSample,1.0,V) < alpha){
+
+        // MinimumStability now reuses bestRhoV — no extra rho(V,Z) calls
+        if (MinimumStability(treeSample, bestRhoV, V, B) < alpha)
             break;
-        }
         
         U = V;
         
-        if (U.returnRank() > highRank){
+        // --- Fix 3: cycle detection ---
+        mPhylo mpU = mPhylo(U);
+        string newickU = mpU.toNewick();
+        if (visited.count(newickU)) {
+            cout << "WARNING: Cycle detected, stopping.\n";
+            break;
+        }
+        visited.insert(newickU);
+        
+        // Update rhoU since U just changed
+        for (int i = 0; i < B; i++)
+            rhoU[i] = rho(U, treeSample[i]);
+
+        if (U.returnRank() > highRank) {
             CollectionTrees.clear();
             CollectionTrees.push_back(U);
             highRank = U.returnRank();
-        } else if (U.returnRank() == highRank){
+        } else if (U.returnRank() == highRank) {
             CollectionTrees.push_back(U);
         }
-        
+
         Count++;
-        
         
         if (U.returnRank() == 2*compLeafSet.size()-7){
             break;
@@ -313,118 +449,156 @@ vector<pTree> stableSearch(vector<pTree> treeSample, vector<int> nSample, set<st
     vector<pTree> CollectionTrees;
     pTree U = pTree("();");
     int B = std::accumulate(nSample.begin(), nSample.end(), 0);
+    int N = static_cast<int>(treeSample.size());
     
     bool RecentlyRemoved = false;
     int Count = 0;
     int highRank = 0;
     
+    // --- Fix 3: visited set to prevent cycles ---
+    set<string> visited;
+
+    // --- Fix 1: cache rho(U, Z) — recomputed only when U changes ---
+    vector<float> rhoU(N);
+    for (int i = 0; i < N; i++)
+        rhoU[i] = rho(U, treeSample[i]);
+    
     while (true) {
         
         vector<pTree> AllV = coverTrees(U, compLeafSet);
         
-        auto rd = std::random_device {};
-        auto rng = std::default_random_engine { rd() };
-        shuffle(begin(AllV), std::end(AllV), rng);
-        
-        //Version where maximal value is found.
-        
-        int IndexMaxS = -1;
-        int IndexMaxL = -1;
-        int IndexMax  = -1;
-        float MaxValueS = 0;
-        float MaxValueL = 0;
+        auto rd  = std::random_device{};
+        auto rng = std::default_random_engine{ rd() };
+        shuffle(begin(AllV), end(AllV), rng);
+
+        // --- Fix 2: find best candidate, saving its rhoV as we go ---
+        int   IndexMax  = -1;
         float MaxValue  = 0;
-        int indx = 0;
-        for (pTree V : AllV){
+        vector<float> bestRhoV(N);
+
+        // Separate trackers for large/small leaf set tiebreak (preserved from original)
+        int   IndexMaxS = -1, IndexMaxL = -1;
+        float MaxValueS = 0,  MaxValueL = 0;
+        vector<float> bestRhoVS(N), bestRhoVL(N);
+        
+        for (int indx = 0; indx < (int)AllV.size(); indx++){
+            const pTree& V = AllV[indx];
+
+            // Compute rho(V, Z) once, reuse for score and later for MinStab
+            vector<float> rhoV(N);
             double tempSum = 0;
-            int curIndx = 0;
-            for (pTree Z : treeSample){
-                if ((rho(V, Z) - rho(U, Z)) > 0){
-                    tempSum+= nSample.at(curIndx);
-                }
-                curIndx++;
+            for (int i = 0; i < N; i++) {
+                rhoV[i] = rho(V, treeSample[i]);
+                if (rhoV[i] - rhoU[i] > 0)
+                    tempSum += nSample[i];
             }
-            if ((V.leafSet.size() > U.leafSet.size()) && (V.leafSet.size()>4)){
-                if ((tempSum/B) > MaxValueL){
-                    MaxValueL = tempSum/B;
+
+            float score = (float)(tempSum / B);
+
+            if ((V.leafSet.size() > U.leafSet.size()) && (V.leafSet.size() > 4)) {
+                if (score > MaxValueL) {
+                    MaxValueL = score;
                     IndexMaxL = indx;
+                    bestRhoVL = rhoV;
                 }
             } else {
-                if ((tempSum/B) > MaxValueS){
-                    MaxValueS = tempSum/B;
+                if (score > MaxValueS) {
+                    MaxValueS = score;
                     IndexMaxS = indx;
+                    bestRhoVS = rhoV;
                 }
             }
-            indx++;
         }
-        if (MaxValueL > MaxValueS){
-            MaxValue = MaxValueL;
-            IndexMax = IndexMaxL;
+        if (MaxValueL > MaxValueS) {
+            MaxValue  = MaxValueL;
+            IndexMax  = IndexMaxL;
+            bestRhoV  = bestRhoVL;
         } else {
-            MaxValue = MaxValueS;
-            IndexMax = IndexMaxS;
+            MaxValue  = MaxValueS;
+            IndexMax  = IndexMaxS;
+            bestRhoV  = bestRhoVS;
         }
+
         
         pTree V = AllV.at(IndexMax);
-        
-        if ((RecentlyRemoved) && (MaxValue < alpha)){
+
+        if (RecentlyRemoved && MaxValue < alpha)
             break;
-        }
-        
+
         RecentlyRemoved = false;
         
-        if (MaxValue < alpha){
-            if((V.leafSet.size() > U.leafSet.size()) && (V.returnRank()>1)){
-                for (string a : U.leafSet){
-                    if (Stability(treeSample, nSample, 1.0, V, a) < alpha){
-                        V = V.Remove(a);
-                        RecentlyRemoved = true;
-                    }
-                }
-                set<Split> FirstSplits = V.intSplits;
-                for (Split s : FirstSplits){
-                    Split s2 = s.TDR(V.leafSet);
-                    if (s2.isInternal()){
-                        if (Stability(treeSample, nSample, 1.0, V, s2) < alpha){
-                            V = V.Remove(s2);
+        // --- Sequential removal block ---
+        // Each time V is modified, bestRhoV is recomputed for the new V
+        if (MaxValue < alpha) {
+
+            // Helper lambda: recompute rhoV for current V
+            auto recomputeRhoV = [&]() {
+                for (int i = 0; i < N; i++)
+                    bestRhoV[i] = rho(V, treeSample[i]);
+            };
+
+            auto tryRemoveLeaves = [&](const set<string>& leaves) {
+                for (const string& a : leaves) {
+                    // Only attempt if leaf still present after prior removals
+                    if (V.leafSet.count(a)) {
+                        if (Stability(treeSample, nSample, V, a, bestRhoV, B) < alpha) {
+                            V = V.Remove(a);
+                            recomputeRhoV();   // V changed — cache is stale
                             RecentlyRemoved = true;
                         }
                     }
                 }
+            };
+
+            auto tryRemoveSplits = [&](const set<Split>& splits) {
+                for (Split s : splits) {
+                    Split s2 = s.TDR(V.leafSet);
+                    if (s2.isInternal()) {
+                        if (Stability(treeSample, nSample, V, s2, bestRhoV, B) < alpha) {
+                            V = V.Remove(s2);
+                            recomputeRhoV();   // V changed — cache is stale
+                            RecentlyRemoved = true;
+                        }
+                    }
+                }
+            };
+
+            if ((V.leafSet.size() > U.leafSet.size()) && (V.returnRank() > 1)) {
+                tryRemoveLeaves(U.leafSet);
+                tryRemoveSplits(V.intSplits);   // use V.intSplits as in original
             } else {
-                for (string a : U.leafSet){
-                    if (Stability(treeSample, nSample, 1.0, V, a) < alpha){
-                        V = V.Remove(a);
-                        RecentlyRemoved = true;
-                    }
-                }
-                set<Split> FirstSplits = U.intSplits;
-                for (Split s : FirstSplits){
-                    Split s2 = s.TDR(V.leafSet);
-                    if (s2.isInternal()){
-                        if (Stability(treeSample, nSample, 1.0, V, s2) < alpha){
-                            V = V.Remove(s2);
-                            RecentlyRemoved = true;
-                        }
-                    }
-                }
+                tryRemoveLeaves(U.leafSet);
+                tryRemoveSplits(U.intSplits);   // use U.intSplits as in original
             }
         }
-        
-        if (MinimumStability(treeSample, nSample,1.0,V) < alpha){
+
+        // MinimumStability now reuses bestRhoV — no extra rho(V,Z) calls
+        if (MinimumStability(treeSample, nSample, bestRhoV, V, B) < alpha)
             break;
-        }
         
         U = V;
         
-        if (U.returnRank() > highRank){
+        // --- Fix 3: cycle detection ---
+        mPhylo mpU = mPhylo(U);
+        string newickU = mpU.toNewick();
+        if (visited.count(newickU)) {
+            cout << "WARNING: Cycle detected, stopping.\n";
+            break;
+        }
+        visited.insert(newickU);
+        
+        // Update rhoU since U just changed
+        for (int i = 0; i < N; i++)
+            rhoU[i] = rho(U, treeSample[i]);
+
+        if (U.returnRank() > highRank) {
             CollectionTrees.clear();
             CollectionTrees.push_back(U);
             highRank = U.returnRank();
-        } else if (U.returnRank() == highRank){
+        } else if (U.returnRank() == highRank) {
             CollectionTrees.push_back(U);
         }
-        
+
         Count++;
         
         if (U.returnRank() == 2*compLeafSet.size()-7){

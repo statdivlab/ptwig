@@ -58,6 +58,7 @@ run_stable_search <- function(newicks = NULL, file = NULL, alpha, summarized = F
         if (all.equal(tree, Top)){
           Found = TRUE;
           Count_trees[i] = Count_trees[i] + 1;
+          break
         }
       }
       if (!Found){

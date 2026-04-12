@@ -161,6 +161,7 @@ run_FDRcontrol_search <- function(newicks = NULL, newicks1 = NULL, newicks2 = NU
         if (all.equal(tree, Top)){
           Found = TRUE;
           Count_trees1[i] = Count_trees1[i] + 1;
+          break
         }
       }
       if (!Found){
@@ -177,6 +178,7 @@ run_FDRcontrol_search <- function(newicks = NULL, newicks1 = NULL, newicks2 = NU
         if (all.equal(tree, Top)){
           Found = TRUE;
           Count_trees2[i] = Count_trees2[i] + 1;
+          break
         }
       }
       if (!Found){

@@ -2,6 +2,7 @@
 #define SUBPOSET_H
 
 #include "pTree.h"
+#include "mPhylo.h"
 #include <set>
 #include <queue>
 #include <vector>
@@ -28,13 +29,14 @@ class spNode{
     
     void setKappa(int newKappa);
     
+    
     void print();
     
     void printRd();
 };
 
 
-class subPoset{//Class describing a complex that is used to compute rho(T1,T2)
+class subPoset{
     public:
         std::vector<spNode> Poset;
     
@@ -46,6 +48,10 @@ class subPoset{//Class describing a complex that is used to compute rho(T1,T2)
     subPoset(std::vector<pTree> initT, std::vector<pTree> Sample, std::set<std::string> compLeafSet, int rb);
     
     subPoset(std::vector<pTree> initT, std::vector<pTree> Sample, std::vector<int> nSample, std::set<std::string> compLeafSet, int rb);
+    
+    subPoset(std::vector<pTree> Sample, std::vector<int> nSample, std::set<std::string> compLeafSet, int Mt, int rb);
+    
+    subPoset(std::vector<pTree> Sample, std::set<std::string> compLeafSet, int Mt, int rb);
     
     void print();
     

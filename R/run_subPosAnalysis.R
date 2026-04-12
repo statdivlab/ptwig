@@ -8,9 +8,12 @@
 #' @param file1 Path to a file containing Newick trees for Stable Search (optional)
 #' @param file2 Path to a file containing Newick trees for subposet Variability Analysis (optional)
 #' @param bfile Path to a file containing Newick trees for probability computation (optional)
-#' @param alpha Numeric value passed to Stable Search for stable threshold.
-#' @param q Numeric value used in FDR control purposes, used in the construction of the subPoset.
-#' @param tau Extra value for subposet building.
+#' @param SPbuilder String indication what method to use to build subposet.
+#' @param alpha Numeric value passed to Stable Search for stable threshold. (in stability-based SubPoset)
+#' @param q Numeric value used in FDR control purposes, used in the construction of the subPoset in stability-based subposet
+#' @param tau Extra value for subposet building in stability-based subposet
+#' @param Mt Number of maximal trees for basic-bifurcation subposet building
+#' @param rb Anchor rank for basic-bifurcation subposet building
 #' @param summarized Boolean factor indicating if the function is to be runned with a summarized version of the sample
 #'
 #' @return Output of SPAnalysisR
@@ -19,7 +22,9 @@
 #' @importFrom ape read.tree
 run_subPostAnalysis <- function(tstar_newick = NULL, newicks1 = NULL, newicks2 = NULL, bnewicks = NULL,
                                   tstar_file = NULL, file1 = NULL, file2 = NULL, bfile = NULL,
-                                  alpha = 0.85, q = 0.1, tau = 0.95, 
+                                  SPbuilder = "stability",
+                                  alpha = 0.85, q = 0.1, tau = 0.95,
+                                  Mt = 1, rb = NULL, delta = NULL, 
                                   summarized = FALSE) {
   
   ## --- Argument validation -------------------------------------------------
@@ -61,6 +66,24 @@ run_subPostAnalysis <- function(tstar_newick = NULL, newicks1 = NULL, newicks2 =
     stop(
       "You must provide a Large Sample for probability estimation in EXACTLY ONE of the following arguments:\n",
       "1. as a collection of newick strings in bnewicks or 2. as a file containing the newick strings in bfile."
+    )
+  }
+  
+  if ((SPbuilder != "stability") && (SPbuilder != "basic")){
+    stop(
+      "The subPoset builder method must be a valid option. It is either:\n",
+      "SPbuilder = 'stability': Building a stable tree first and branching out from there\n",
+      "SPbuilder = 'basic': For basic bifurcation with known number of maximal trees and bifurcation rank level."
+    )
+  }
+  
+  if (is.null(delta)){
+    delta = q/2
+  }
+  
+  if (delta >= q){
+    stop(
+      "The value of delta must be strictly lower than q \n"
     )
   }
   
@@ -164,6 +187,7 @@ run_subPostAnalysis <- function(tstar_newick = NULL, newicks1 = NULL, newicks2 =
         if (all.equal(tree, Top)){
           Found = TRUE;
           Count_trees1[i] = Count_trees1[i] + 1;
+          break
         }
       }
       if (!Found){
@@ -180,6 +204,7 @@ run_subPostAnalysis <- function(tstar_newick = NULL, newicks1 = NULL, newicks2 =
         if (all.equal(tree, Top)){
           Found = TRUE;
           Count_btrees[i] = Count_btrees[i] + 1;
+          break
         }
       }
       if (!Found){
@@ -196,6 +221,7 @@ run_subPostAnalysis <- function(tstar_newick = NULL, newicks1 = NULL, newicks2 =
         if (all.equal(tree, Top)){
           Found = TRUE;
           Count_trees2[i] = Count_trees2[i] + 1;
+          break
         }
       }
       if (!Found){
@@ -210,12 +236,26 @@ run_subPostAnalysis <- function(tstar_newick = NULL, newicks1 = NULL, newicks2 =
     cleaned_newicksb <- vapply(Unique_btrees, ape::write.tree, FUN.VALUE = character(1))
     
     ## --- Call your Rcpp backend ----------------------------------------------
-    res <-  SPAnalysisRS(treeStar = cleaned_treeStar,
-                 treeSample1R = cleaned_newicks1, nSample1R = Count_trees1,
-                 treeSample2R = cleaned_newicks2, nSample2R = Count_trees2,
-                 bigTreeSampleR = cleaned_newicksb, nBSampleR = Count_btrees,
-                 compLeafSetR = completeLeaveSet,
-                 alphaR = alpha, qR = q, tauR = tau)
+    if (SPbuilder == "stability"){
+      res <-  SPAnalysisRS(treeStar = cleaned_treeStar,
+                           treeSample1R = cleaned_newicks1, nSample1R = Count_trees1,
+                           treeSample2R = cleaned_newicks2, nSample2R = Count_trees2,
+                           bigTreeSampleR = cleaned_newicksb, nBSampleR = Count_btrees,
+                           compLeafSetR = completeLeaveSet,
+                           alphaR = alpha, qR = q, tauR = tau, deltaR = delta)
+    } else if (SPbuilder == "basic") {
+      if (is.null(rb)){
+        rb = length(completeLeaveSet) - 4;
+      }
+      
+      res <-  SPAnalysisR2S(treeStar = cleaned_treeStar,
+                    treeSample1R = cleaned_newicks1, nSample1R = Count_trees1,
+                    treeSample2R = cleaned_newicks2, nSample2R = Count_trees2,
+                    bigTreeSampleR = cleaned_newicksb, nBSampleR = Count_btrees,
+                    compLeafSetR = completeLeaveSet,
+                    MtR = Mt, rbR = rb, qR = q, deltaR = delta)
+    }
+   
   } else {
     ## --- Write cleaned trees back to Newick strings ---------------------------
     cleaned_newicks1 <- vapply(trees1, ape::write.tree, FUN.VALUE = character(1))
@@ -223,12 +263,25 @@ run_subPostAnalysis <- function(tstar_newick = NULL, newicks1 = NULL, newicks2 =
     cleaned_newicksb <- vapply(btrees, ape::write.tree, FUN.VALUE = character(1))
     
     ## --- Call your Rcpp backend ----------------------------------------------
-    res <-  SPAnalysisRS(treeStar = cleaned_treeStar,
-                         treeSample1R = cleaned_newicks1, 
-                         treeSample2R = cleaned_newicks2, 
-                         bigTreeSampleR = cleaned_newicksb, 
-                         compLeafSetR = completeLeaveSet,
-                         alphaR = alpha, qR = q, tauR = tau)
+    if (SPbuilder == "stability"){
+      res <-  SPAnalysisR(treeStar = cleaned_treeStar,
+                           treeSample1R = cleaned_newicks1, 
+                           treeSample2R = cleaned_newicks2, 
+                           bigTreeSampleR = cleaned_newicksb, 
+                           compLeafSetR = completeLeaveSet,
+                           alphaR = alpha, qR = q, tauR = tau, deltaR = delta)
+    } else if (SPbuilder == "basic") {
+      if (is.null(rb)){
+        rb = length(completeLeaveSet) - 4;
+      }
+      
+      res <-  SPAnalysisR2(treeStar = cleaned_treeStar,
+                            treeSample1R = cleaned_newicks1, 
+                            treeSample2R = cleaned_newicks2,
+                            bigTreeSampleR = cleaned_newicksb, 
+                            compLeafSetR = completeLeaveSet,
+                            MtR = Mt, rbR = rb, qR = q, deltaR = delta)
+    }
   }
   
   return(res)
