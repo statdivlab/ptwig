@@ -38,6 +38,7 @@ run_stable_search <- function(newicks = NULL, file = NULL, alpha, summarized = F
     
     # Remove branch lengths (set to NULL so ape::write.tree does not print them)
     tr$edge.length <- NULL
+    tr$node.label <- NULL
     tr
   })
   

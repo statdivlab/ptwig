@@ -156,6 +156,7 @@ run_nullCovering_prob <- function(tstar_newick = NULL, newicks = NULL, newicks1 
   ## --- Normalize: unroot and remove edge lengths ---------------------------
   tree_star1 <- ape::unroot(tree_star1)
   tree_star1$edge.length <- NULL
+  tree_star1$node.label <- NULL
   cleaned_treeStar <- ape::write.tree(phy = tree_star1)
   
   trees1 <- lapply(trees1, function(tr) {
@@ -166,6 +167,7 @@ run_nullCovering_prob <- function(tstar_newick = NULL, newicks = NULL, newicks1 
     
     # Remove branch lengths (set to NULL so ape::write.tree does not print them)
     tr$edge.length <- NULL
+    tr$node.label <- NULL
     tr
   })
   
@@ -177,6 +179,7 @@ run_nullCovering_prob <- function(tstar_newick = NULL, newicks = NULL, newicks1 
     
     # Remove branch lengths (set to NULL so ape::write.tree does not print them)
     tr$edge.length <- NULL
+    tr$node.label <- NULL
     tr
   })
   

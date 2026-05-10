@@ -26,6 +26,22 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// completeSearchRcpp_V2
+CharacterVector completeSearchRcpp_V2(CharacterVector treeSample1R, CharacterVector treeSample2R, CharacterVector compLeafSetR, int MtR, int rbR, double qR);
+RcppExport SEXP _ptwig_completeSearchRcpp_V2(SEXP treeSample1RSEXP, SEXP treeSample2RSEXP, SEXP compLeafSetRSEXP, SEXP MtRSEXP, SEXP rbRSEXP, SEXP qRSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< CharacterVector >::type treeSample1R(treeSample1RSEXP);
+    Rcpp::traits::input_parameter< CharacterVector >::type treeSample2R(treeSample2RSEXP);
+    Rcpp::traits::input_parameter< CharacterVector >::type compLeafSetR(compLeafSetRSEXP);
+    Rcpp::traits::input_parameter< int >::type MtR(MtRSEXP);
+    Rcpp::traits::input_parameter< int >::type rbR(rbRSEXP);
+    Rcpp::traits::input_parameter< double >::type qR(qRSEXP);
+    rcpp_result_gen = Rcpp::wrap(completeSearchRcpp_V2(treeSample1R, treeSample2R, compLeafSetR, MtR, rbR, qR));
+    return rcpp_result_gen;
+END_RCPP
+}
 // completeSearchRcppS
 CharacterVector completeSearchRcppS(CharacterVector treeSample1R, IntegerVector nSample1R, CharacterVector treeSample2R, IntegerVector nSample2R, CharacterVector compLeafSetR, double alphaR, double qR, double tauR);
 RcppExport SEXP _ptwig_completeSearchRcppS(SEXP treeSample1RSEXP, SEXP nSample1RSEXP, SEXP treeSample2RSEXP, SEXP nSample2RSEXP, SEXP compLeafSetRSEXP, SEXP alphaRSEXP, SEXP qRSEXP, SEXP tauRSEXP) {
@@ -41,6 +57,24 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type qR(qRSEXP);
     Rcpp::traits::input_parameter< double >::type tauR(tauRSEXP);
     rcpp_result_gen = Rcpp::wrap(completeSearchRcppS(treeSample1R, nSample1R, treeSample2R, nSample2R, compLeafSetR, alphaR, qR, tauR));
+    return rcpp_result_gen;
+END_RCPP
+}
+// completeSearchRcppS_V2
+CharacterVector completeSearchRcppS_V2(CharacterVector treeSample1R, IntegerVector nSample1R, CharacterVector treeSample2R, IntegerVector nSample2R, CharacterVector compLeafSetR, int MtR, int rbR, double qR);
+RcppExport SEXP _ptwig_completeSearchRcppS_V2(SEXP treeSample1RSEXP, SEXP nSample1RSEXP, SEXP treeSample2RSEXP, SEXP nSample2RSEXP, SEXP compLeafSetRSEXP, SEXP MtRSEXP, SEXP rbRSEXP, SEXP qRSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< CharacterVector >::type treeSample1R(treeSample1RSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type nSample1R(nSample1RSEXP);
+    Rcpp::traits::input_parameter< CharacterVector >::type treeSample2R(treeSample2RSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type nSample2R(nSample2RSEXP);
+    Rcpp::traits::input_parameter< CharacterVector >::type compLeafSetR(compLeafSetRSEXP);
+    Rcpp::traits::input_parameter< int >::type MtR(MtRSEXP);
+    Rcpp::traits::input_parameter< int >::type rbR(rbRSEXP);
+    Rcpp::traits::input_parameter< double >::type qR(qRSEXP);
+    rcpp_result_gen = Rcpp::wrap(completeSearchRcppS_V2(treeSample1R, nSample1R, treeSample2R, nSample2R, compLeafSetR, MtR, rbR, qR));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -126,6 +160,18 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// VerifyingRho
+bool VerifyingRho(CharacterVector treeR, CharacterVector compLeafSetR);
+RcppExport SEXP _ptwig_VerifyingRho(SEXP treeRSEXP, SEXP compLeafSetRSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< CharacterVector >::type treeR(treeRSEXP);
+    Rcpp::traits::input_parameter< CharacterVector >::type compLeafSetR(compLeafSetRSEXP);
+    rcpp_result_gen = Rcpp::wrap(VerifyingRho(treeR, compLeafSetR));
+    return rcpp_result_gen;
+END_RCPP
+}
 // computeFD
 int computeFD(CharacterVector treeR1, CharacterVector treeR2);
 RcppExport SEXP _ptwig_computeFD(SEXP treeR1SEXP, SEXP treeR2SEXP) {
@@ -170,6 +216,18 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< CharacterVector >::type treeR1(treeR1SEXP);
     Rcpp::traits::input_parameter< CharacterVector >::type treeR2(treeR2SEXP);
     rcpp_result_gen = Rcpp::wrap(computeSimilarity(treeR1, treeR2));
+    return rcpp_result_gen;
+END_RCPP
+}
+// computeSimilarity2
+int computeSimilarity2(CharacterVector treeR1, CharacterVector treeR2);
+RcppExport SEXP _ptwig_computeSimilarity2(SEXP treeR1SEXP, SEXP treeR2SEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< CharacterVector >::type treeR1(treeR1SEXP);
+    Rcpp::traits::input_parameter< CharacterVector >::type treeR2(treeR2SEXP);
+    rcpp_result_gen = Rcpp::wrap(computeSimilarity2(treeR1, treeR2));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -256,15 +314,19 @@ END_RCPP
 
 static const R_CallMethodDef CallEntries[] = {
     {"_ptwig_completeSearchRcpp", (DL_FUNC) &_ptwig_completeSearchRcpp, 6},
+    {"_ptwig_completeSearchRcpp_V2", (DL_FUNC) &_ptwig_completeSearchRcpp_V2, 6},
     {"_ptwig_completeSearchRcppS", (DL_FUNC) &_ptwig_completeSearchRcppS, 8},
+    {"_ptwig_completeSearchRcppS_V2", (DL_FUNC) &_ptwig_completeSearchRcppS_V2, 8},
     {"_ptwig_SPAnalysisR", (DL_FUNC) &_ptwig_SPAnalysisR, 9},
     {"_ptwig_SPAnalysisR2", (DL_FUNC) &_ptwig_SPAnalysisR2, 9},
     {"_ptwig_SPAnalysisRS", (DL_FUNC) &_ptwig_SPAnalysisRS, 12},
     {"_ptwig_SPAnalysisR2S", (DL_FUNC) &_ptwig_SPAnalysisR2S, 12},
+    {"_ptwig_VerifyingRho", (DL_FUNC) &_ptwig_VerifyingRho, 2},
     {"_ptwig_computeFD", (DL_FUNC) &_ptwig_computeFD, 2},
     {"_ptwig_computeFDP", (DL_FUNC) &_ptwig_computeFDP, 2},
     {"_ptwig_computeRank", (DL_FUNC) &_ptwig_computeRank, 1},
     {"_ptwig_computeSimilarity", (DL_FUNC) &_ptwig_computeSimilarity, 2},
+    {"_ptwig_computeSimilarity2", (DL_FUNC) &_ptwig_computeSimilarity2, 2},
     {"_ptwig_computeNewSubposet", (DL_FUNC) &_ptwig_computeNewSubposet, 5},
     {"_ptwig_nullCoveringProbComputation", (DL_FUNC) &_ptwig_nullCoveringProbComputation, 8},
     {"_ptwig_nullCoveringProbComputationS", (DL_FUNC) &_ptwig_nullCoveringProbComputationS, 10},

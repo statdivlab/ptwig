@@ -51,6 +51,7 @@ run_NewSubposet <- function(newicks = NULL, file = NULL, Mt, rb) {
     
     # Remove branch lengths (set to NULL so ape::write.tree does not print them)
     tr$edge.length <- NULL
+    tr$node.label <- NULL
     tr
   })
   

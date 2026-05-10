@@ -42,7 +42,7 @@ float kappa_threshold(float omegaT, float q, int N, int kappa){
 }
 
 float rad_threshold(float omegaT, float q, int N, float Rad, float delta){
-    float Udelta = 2*Rad + 2*sqrt(-log(delta)/(2*N));
+    float Udelta = 2*Rad + 2*sqrt((log(2) - log(delta))/(2*N));
     float prelim = log(omegaT) - log((q - delta));
     float thrs1 = std::max(2*prelim/N, 0.0f);
     
@@ -53,12 +53,12 @@ subPosetOutput SPanalisys(pTree tStar, vector<pTree> treeSample, vector<pTree> b
     
     subPosetOutput result;
     
-    vector<array<int, 2>> NullPairs;
+    //vector<array<int, 2>> NullPairs;
     
     //Finding the pairs in C_null with upper tree of rank 1 and forming the edges above
     
     int curIndx = SP.firstRank.at(1);
-    int numberPairsFirstLevel = 0;
+    //int numberPairsFirstLevel = 0;
     
     vector<vector<float>> covPairsIndicators;
     //int numPairs = 0;
@@ -66,9 +66,9 @@ subPosetOutput SPanalisys(pTree tStar, vector<pTree> treeSample, vector<pTree> b
         result.edges.push_back({-1, (curIndx+1)});
         vector<float> IndividualIndicators;
         if (rho(SP.Poset.at(curIndx).Tree,tStar) == 0){
-            NullPairs.push_back({curIndx,-1});
+            //NullPairs.push_back({curIndx,-1});
             result.nullCovering.push_back(true);
-            numberPairsFirstLevel++;
+            //numberPairsFirstLevel++;
             //numPairs++;
             //cout << "Tree pair " << numPairs << " that belong to null pairs with 0 : \n";
             //SP.Poset.at(curIndx).Tree.print();
@@ -81,7 +81,7 @@ subPosetOutput SPanalisys(pTree tStar, vector<pTree> treeSample, vector<pTree> b
         float curvar = 0;
         int curn = 1;
         
-         IndividualIndicators.push_back(curmean);
+        IndividualIndicators.push_back(curmean);
         
         for (int k = 1; k < treeSample.size(); k++){
             float Xvalue = (rho(SP.Poset.at(curIndx).Tree, treeSample.at(k)) > 0);
@@ -107,7 +107,7 @@ subPosetOutput SPanalisys(pTree tStar, vector<pTree> treeSample, vector<pTree> b
             result.edges.push_back({(i+1),(j+1)});
             vector<float> IndividualIndicators;
             if (rho(SP.Poset.at(i).Tree, tStar) == rho(SP.Poset.at(j).Tree, tStar)){
-                NullPairs.push_back({j,i});
+                //NullPairs.push_back({j,i});
                 result.nullCovering.push_back(true);
                 //numPairs++;
                 //cout << "Tree pair " << numPairs << " that belong to null pairs: \n";
@@ -146,7 +146,7 @@ subPosetOutput SPanalisys(pTree tStar, vector<pTree> treeSample, vector<pTree> b
     
     int B = (int)treeSample.size();
     
-    int T = 1000;
+    int T = 10000;
     int k = (int)result.edges.size();
 
     std::mt19937 rng(42);
@@ -177,6 +177,105 @@ subPosetOutput SPanalisys(pTree tStar, vector<pTree> treeSample, vector<pTree> b
     }
     result.RademacherComplex =  static_cast<float>(total / T);
     
+    // Precompute le[i][j] = true means edge[i] <= edge[j]
+std::vector<std::vector<bool>> le(k, std::vector<bool>(k, false));
+for (int i = 0; i < k; ++i)
+    for (int j = 0; j < k; ++j)
+        if (i != j){
+            if (result.edges[j].first > 0){
+                le[i][j] = SP.Poset.at(result.edges[j].first -1 )
+                             .Tree.over(SP.Poset.at(result.edges[i].second - 1).Tree);
+            }
+        }
+            
+
+// perTrialVal[t][a] = (1/B) sum_i sigma_i * covPairsIndicators[a][i]  for trial t
+std::vector<std::vector<double>> perTrialVal(T, std::vector<double>(k, 0.0));
+
+for (int t = 0; t < T; ++t) {
+    for (int i = 0; i < B; ++i)
+        sigma[i] = coin(rng) ? 1 : -1;
+    for (int a = 0; a < k; ++a) {
+        double val = 0.0;
+        for (int i = 0; i < B; ++i)
+            val += sigma[i] * covPairsIndicators[a][i];
+        perTrialVal[t][a] = val / B;
+    }
+}
+
+// For a given antichain (subset of edge indices), its score is:
+// (1/T) * sum_t  max_{a in A} perTrialVal[t][a]
+/*auto scoreAntichain = [&](const std::vector<int>& A) -> double {
+    if (A.empty()) return 0.0;
+    double total = 0.0;
+    for (int t = 0; t < T; ++t) {
+        double best = -std::numeric_limits<double>::infinity();
+        for (int a : A)
+            best = std::max(best, perTrialVal[t][a]);
+        total += best;
+    }
+    return total / T;
+};*/
+
+// Greedy antichain construction seeded from every singleton.
+// At each step, add the edge with highest marginal score gain,
+// provided it is incomparable to all current members.
+double bestScore = 0.0;  // empty antichain scores 0
+std::vector<int> bestAntichain;
+
+for (int seed = 0; seed < k; ++seed) {
+    std::vector<int> antichain = {seed};
+    std::vector<bool> compatible(k, true);
+    compatible[seed] = false;
+    for (int j = 0; j < k; ++j)
+        if (j != seed && (le[seed][j] || le[j][seed]))
+            compatible[j] = false;
+
+    // Cache current per-trial maxima for the antichain
+    std::vector<double> trialMax(T);
+    for (int t = 0; t < T; ++t)
+        trialMax[t] = perTrialVal[t][seed];
+
+    double currentScore = 0.0;
+    for (int t = 0; t < T; ++t) currentScore += trialMax[t];
+    currentScore /= T;
+
+    while (true) {
+        int bestJ = -1;
+        double bestGain = 0.0;  // only add if gain > 0
+
+        for (int j = 0; j < k; ++j) {
+            if (!compatible[j]) continue;
+            // Marginal gain: replacing trialMax[t] with max(trialMax[t], perTrialVal[t][j])
+            double gain = 0.0;
+            for (int t = 0; t < T; ++t)
+                gain += std::max(0.0, perTrialVal[t][j] - trialMax[t]);
+            gain /= T;
+            if (gain > bestGain) { bestGain = gain; bestJ = j; }
+        }
+
+        if (bestJ == -1) break;
+
+        // Update trialMax and compatibility
+        for (int t = 0; t < T; ++t)
+            trialMax[t] = std::max(trialMax[t], perTrialVal[t][bestJ]);
+        currentScore += bestGain;
+
+        antichain.push_back(bestJ);
+        compatible[bestJ] = false;
+        for (int j = 0; j < k; ++j)
+            if (compatible[j] && (le[bestJ][j] || le[j][bestJ]))
+                compatible[j] = false;
+    }
+
+    if (currentScore > bestScore) {
+        bestScore = currentScore;
+        bestAntichain = antichain;
+    }
+}
+
+result.RademacherComplex2 = static_cast<float>(bestScore);
+    
     // Now, computing the probabilities estimates for each pair and keeping track of the minimum computed.
     
     int minTimesCorrectlyClassified = bigTreeSample.size(); // We will keep track of the number of times the pair was correctly classified to make sure we deal with the minimum probability found.
@@ -185,51 +284,42 @@ subPosetOutput SPanalisys(pTree tStar, vector<pTree> treeSample, vector<pTree> b
     int minLower = -2;
     int minUpper = -2;
     
-    vector<vector<float>> covPairsIndicatorsB;
-    
-    for (int k = 0; k < numberPairsFirstLevel; k++){
+    for (int cp = 0 ; cp < result.edges.size() ; cp++){
+        int lIndx = result.edges[cp].first - 1;
+        int uIndx = result.edges[cp].second - 1;
+        
         int curSum = 0;
-        bool itBroke = false;
-        for (pTree T : bigTreeSample){
-            if (rho(T, SP.Poset.at(NullPairs[k][0]).Tree) == 0){
-                curSum++;
+        
+        if (lIndx < 0){
+            for (pTree T : bigTreeSample){
+                if (rho(T, SP.Poset.at(uIndx).Tree) == 0){
+                    curSum++;
+                }
             }
-            if (curSum >= minTimesCorrectlyClassified) {
-                itBroke = true;
-                break;
+            if (result.nullCovering[cp]){
+                if (curSum < minTimesCorrectlyClassified){
+                    minTimesCorrectlyClassified = curSum;
+                    minUpper = uIndx;
+                    minLower = lIndx;
+                } 
             }
-        }
-        if (!itBroke){
-            minTimesCorrectlyClassified = curSum;
-            minUpper = NullPairs[k][0];
-            //cout << "Minimum changed with tree pair " << (k+1) << " with 0: \n";
-            //SP.Poset.at(NullPairs[k][0]).Tree.print();
-            //cout << "\n";
+            
+        } else {
+             for (pTree T : bigTreeSample){
+                 if (rho(T, SP.Poset.at(lIndx).Tree) == rho(T, SP.Poset.at(uIndx).Tree)){
+                     curSum++;
+                 }
+             }
+            if (result.nullCovering[cp]){
+                if (curSum < minTimesCorrectlyClassified){
+                    minTimesCorrectlyClassified = curSum;
+                    minUpper = uIndx;
+                    minLower = lIndx;
+                } 
+            }
         }
         
-    }
-    
-    for (int k = numberPairsFirstLevel; k < NullPairs.size(); k++){
-        int curSum = 0;
-        bool itBroke = false;
-        for (pTree T : bigTreeSample){
-            if (rho(T, SP.Poset.at(NullPairs[k][0]).Tree) == rho(T, SP.Poset.at(NullPairs[k][1]).Tree)){
-                curSum++;
-            }
-            if (curSum >= minTimesCorrectlyClassified) {
-                itBroke = true;
-                break;
-            }
-        }
-        if (!itBroke){
-            minTimesCorrectlyClassified = curSum;
-            minUpper = NullPairs[k][0];
-            minLower = NullPairs[k][1];
-            //cout << "Minimum changed with tree pair " << (k+1) << ": \n";
-            //SP.Poset.at(NullPairs[k][0]).Tree.print();
-            //SP.Poset.at(NullPairs[k][1]).Tree.print();
-            //cout << "\n";
-        }
+        result.etaValues.push_back(static_cast<float>(curSum)/sampleSize);
     }
     
     result.nullCoveringProb = static_cast<float>(minTimesCorrectlyClassified)/sampleSize;
@@ -243,7 +333,7 @@ subPosetOutput SPanalisys(pTree tStar, vector<pTree> treeSample, vector<pTree> b
     
     while (curIndx > -1){
         float kappa_t = kappa_threshold(1, q, B, SP.Poset.at(curIndx).kappa);
-        float rad_t = rad_threshold(1, q, B, result.RademacherComplex, delta);
+        float rad_t = rad_threshold(1, q, B, result.RademacherComplex2, delta);
         
         result.kappa_Ts_05.push_back(0.5f + kappa_t);
         result.kappa_Ts_p.push_back(addedEta + kappa_t);
@@ -259,7 +349,7 @@ subPosetOutput SPanalisys(pTree tStar, vector<pTree> treeSample, vector<pTree> b
             float omegaTemp =  static_cast<float>(rmax - SP.Poset.at(j).Tree.rank + 1)/(static_cast<float>(rmax));
             
             float kappa_t = kappa_threshold(omegaTemp, q, B, SP.Poset.at(j).kappa);
-            float rad_t = rad_threshold(omegaTemp, q, B, result.RademacherComplex, delta);
+            float rad_t = rad_threshold(omegaTemp, q, B, result.RademacherComplex2, delta);
         
             result.kappa_Ts_05.push_back(0.5f + kappa_t);
             result.kappa_Ts_p.push_back(addedEta + kappa_t);
@@ -275,12 +365,12 @@ subPosetOutput SPanalisys(pTree tStar, vector<pTree> treeSample, vector<int> nSa
     
     subPosetOutput result;
     
-    vector<array<int, 2>> NullPairs;
+    //vector<array<int, 2>> NullPairs;
     
     //Finding the pairs in C_null with upper tree of rank 1 and forming the edges above.
     
     int curIndx = SP.firstRank.at(1);
-    int numberPairsFirstLevel = 0;
+    //int numberPairsFirstLevel = 0;
     //int numPairs = 0;
     
     vector<vector<float>> covPairsIndicators;
@@ -289,9 +379,9 @@ subPosetOutput SPanalisys(pTree tStar, vector<pTree> treeSample, vector<int> nSa
         result.edges.push_back({-1, (curIndx+1)});
         vector<float> IndividualIndicators;
         if (rho(SP.Poset.at(curIndx).Tree,tStar) == 0){
-            NullPairs.push_back({curIndx,-1});
+            //NullPairs.push_back({curIndx,-1});
             result.nullCovering.push_back(true);
-            numberPairsFirstLevel++;
+            //numberPairsFirstLevel++;
             //numPairs++;
             //cout << "Tree pair " << numPairs << " that belong to null pairs with 0 : \n";
             //SP.Poset.at(curIndx).Tree.print();
@@ -331,7 +421,7 @@ subPosetOutput SPanalisys(pTree tStar, vector<pTree> treeSample, vector<int> nSa
             result.edges.push_back({(i+1),(j+1)});
             vector<float> IndividualIndicators;
             if (rho(SP.Poset.at(i).Tree, tStar) == rho(SP.Poset.at(j).Tree, tStar)){
-                NullPairs.push_back({j,i});
+                //NullPairs.push_back({j,i});
                 result.nullCovering.push_back(true);
                 //numPairs++;
                 //cout << "Tree pair " << numPairs << " that belong to null pairs: \n";
@@ -403,7 +493,112 @@ subPosetOutput SPanalisys(pTree tStar, vector<pTree> treeSample, vector<int> nSa
     }
     result.RademacherComplex =  static_cast<float>(total / T);
     
+    // Precompute le[i][j] = true means edge[i] <= edge[j]
+std::vector<std::vector<bool>> le(k, std::vector<bool>(k, false));
+for (int i = 0; i < k; ++i)
+    for (int j = 0; j < k; ++j)
+        if (i != j){
+            if (result.edges[j].first > 0){
+                le[i][j] = SP.Poset.at(result.edges[j].first - 1)
+                             .Tree.over(SP.Poset.at(result.edges[i].second - 1).Tree);
+            }
+        }
+            
+
+// perTrialVal[t][a] = (1/B) sum_i sigma_i * covPairsIndicators[a][i]  for trial t
     
+std::vector<std::vector<double>> perTrialVal(T, std::vector<double>(k, 0.0));
+
+for (int t = 0; t < T; ++t) {
+    for (int i = 0; i < B; ++i)
+        sigma[i] = coin(rng) ? 1 : -1;
+    for (int a = 0; a < k; ++a) {
+        double val = 0.0;
+        int sigmaCounter = 0;
+        for (int i = 0; i < treeSample.size(); i++){
+            for (int l = 0; l < nSample[i]; l++){
+                val += sigma[sigmaCounter] * covPairsIndicators[a][i];
+                sigmaCounter++;
+            }
+        }
+        perTrialVal[t][a] = val / B;
+    }
+}
+
+// For a given antichain (subset of edge indices), its score is:
+// (1/T) * sum_t  max_{a in A} perTrialVal[t][a]
+ 
+/*auto scoreAntichain = [&](const std::vector<int>& A) -> double {
+    if (A.empty()) return 0.0;
+    double total = 0.0;
+    for (int t = 0; t < T; ++t) {
+        double best = -std::numeric_limits<double>::infinity();
+        for (int a : A)
+            best = std::max(best, perTrialVal[t][a]);
+        total += best;
+    }
+    return total / T;
+};*/
+
+// Greedy antichain construction seeded from every singleton.
+// At each step, add the edge with highest marginal score gain,
+// provided it is incomparable to all current members.
+double bestScore = 0.0;  // empty antichain scores 0
+std::vector<int> bestAntichain;
+
+for (int seed = 0; seed < k; ++seed) {
+    std::vector<int> antichain = {seed};
+    std::vector<bool> compatible(k, true);
+    compatible[seed] = false;
+    for (int j = 0; j < k; ++j)
+        if (j != seed && (le[seed][j] || le[j][seed]))
+            compatible[j] = false;
+
+    // Cache current per-trial maxima for the antichain
+    std::vector<double> trialMax(T);
+    for (int t = 0; t < T; ++t)
+        trialMax[t] = perTrialVal[t][seed];
+
+    double currentScore = 0.0;
+    for (int t = 0; t < T; ++t) currentScore += trialMax[t];
+    currentScore /= T;
+
+    while (true) {
+        int bestJ = -1;
+        double bestGain = 0.0;  // only add if gain > 0
+
+        for (int j = 0; j < k; ++j) {
+            if (!compatible[j]) continue;
+            // Marginal gain: replacing trialMax[t] with max(trialMax[t], perTrialVal[t][j])
+            double gain = 0.0;
+            for (int t = 0; t < T; ++t)
+                gain += std::max(0.0, perTrialVal[t][j] - trialMax[t]);
+            gain /= T;
+            if (gain > bestGain) { bestGain = gain; bestJ = j; }
+        }
+
+        if (bestJ == -1) break;
+
+        // Update trialMax and compatibility
+        for (int t = 0; t < T; ++t)
+            trialMax[t] = std::max(trialMax[t], perTrialVal[t][bestJ]);
+        currentScore += bestGain;
+
+        antichain.push_back(bestJ);
+        compatible[bestJ] = false;
+        for (int j = 0; j < k; ++j)
+            if (compatible[j] && (le[bestJ][j] || le[j][bestJ]))
+                compatible[j] = false;
+    }
+
+    if (currentScore > bestScore) {
+        bestScore = currentScore;
+        bestAntichain = antichain;
+    }
+}
+    
+
+result.RademacherComplex2 = static_cast<float>(bestScore);
     
     // Now, computing the probabilities estimates for each pair and keeping track of the minimum computed.
     int sampleSize = std::accumulate(nBSample.begin(), nBSample.end(), 0);
@@ -412,43 +607,44 @@ subPosetOutput SPanalisys(pTree tStar, vector<pTree> treeSample, vector<int> nSa
     int minLower = -2;
     int minUpper = -2;
     
-    for (int k = 0; k < numberPairsFirstLevel; k++){
+    for (int cp = 0 ; cp < result.edges.size() ; cp++){
+        int lIndx = result.edges[cp].first - 1;
+        int uIndx = result.edges[cp].second - 1;
+        
         int curSum = 0;
-        bool itBroke = false;
-        for (int i = 0; i < treeSample.size(); i++){
-            pTree T = treeSample.at(i);
-            if (rho(T, SP.Poset.at(NullPairs[k][0]).Tree) == 0){
-                curSum += nBSample.at(i);
+        
+        if (lIndx < 0){
+            for (int i = 0; i < treeSample.size(); i++){
+                pTree T = treeSample.at(i);
+                if (rho(T, SP.Poset.at(uIndx).Tree) == 0){
+                    curSum += nBSample.at(i);
+                }
             }
-            if (curSum >= minTimesCorrectlyClassified) {
-                itBroke = true;
-                break;
+            if (result.nullCovering[cp]){
+                if (curSum < minTimesCorrectlyClassified){
+                    minTimesCorrectlyClassified = curSum;
+                    minUpper = uIndx;
+                    minLower = lIndx;
+                } 
+            }
+            
+        } else {
+             for (int i = 0; i < treeSample.size(); i++){
+                 pTree T = treeSample.at(i);
+                 if (rho(T, SP.Poset.at(lIndx).Tree) == rho(T, SP.Poset.at(uIndx).Tree)){
+                     curSum += nBSample.at(i);
+                 }
+             }
+            if (result.nullCovering[cp]){
+                if (curSum < minTimesCorrectlyClassified){
+                    minTimesCorrectlyClassified = curSum;
+                    minUpper = uIndx;
+                    minLower = lIndx;
+                } 
             }
         }
-        if(!itBroke){
-            minTimesCorrectlyClassified = curSum;
-            minUpper = NullPairs[k][0];
-        }
-    }
-    
-    for (int k = numberPairsFirstLevel; k < NullPairs.size(); k++){
-        int curSum = 0;
-        bool itBroke = false;
-        for (int i = 0; i < treeSample.size(); i++){
-            pTree T = treeSample.at(i);
-            if (rho(T, SP.Poset.at(NullPairs[k][0]).Tree) == rho(T, SP.Poset.at(NullPairs[k][1]).Tree)){
-                curSum += nBSample.at(i);
-            }
-            if (curSum >= minTimesCorrectlyClassified) {
-                itBroke = true;
-                break;
-            }
-        }
-        if (!itBroke){
-            minTimesCorrectlyClassified = curSum;
-            minUpper = NullPairs[k][0];
-            minLower = NullPairs[k][1];
-        }
+        
+        result.etaValues.push_back(static_cast<float>(curSum)/sampleSize);
     }
     
     result.nullCoveringProb = static_cast<float>(minTimesCorrectlyClassified)/sampleSize;
@@ -462,7 +658,7 @@ subPosetOutput SPanalisys(pTree tStar, vector<pTree> treeSample, vector<int> nSa
     
     while (curIndx > -1){
         float kappa_t = kappa_threshold(1, q, B, SP.Poset.at(curIndx).kappa);
-        float rad_t = rad_threshold(1, q, B, result.RademacherComplex, delta);
+        float rad_t = rad_threshold(1, q, B, result.RademacherComplex2, delta);
         
         result.kappa_Ts_05.push_back(0.5f + kappa_t);
         result.kappa_Ts_p.push_back(addedEta + kappa_t);
@@ -478,7 +674,7 @@ subPosetOutput SPanalisys(pTree tStar, vector<pTree> treeSample, vector<int> nSa
             float omegaTemp =  static_cast<float>(rmax - SP.Poset.at(j).Tree.rank + 1)/(static_cast<float>(rmax));
             
             float kappa_t = kappa_threshold(omegaTemp, q, B, SP.Poset.at(j).kappa);
-            float rad_t = rad_threshold(omegaTemp, q, B, result.RademacherComplex, delta);
+            float rad_t = rad_threshold(omegaTemp, q, B, result.RademacherComplex2, delta);
         
             result.kappa_Ts_05.push_back(0.5f + kappa_t);
             result.kappa_Ts_p.push_back(addedEta + kappa_t);

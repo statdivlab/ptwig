@@ -28,6 +28,7 @@
 using namespace Rcpp;
 using namespace std;
 
+
 // [[Rcpp::export]]
 Rcpp::List SPAnalysisR(CharacterVector treeStar,
                                   CharacterVector treeSample1R,
@@ -37,6 +38,8 @@ Rcpp::List SPAnalysisR(CharacterVector treeStar,
                                  double alphaR, double qR, double tauR, double deltaR) {
     
     pTree tStar = pTree(as<std::string>(treeStar));
+    
+    int B1 = treeSample1R.size();
     
     std::vector<pTree> treeSample1;
     treeSample1.reserve(treeSample1R.size());
@@ -111,6 +114,62 @@ Rcpp::List SPAnalysisR(CharacterVector treeStar,
     
     subPoset subPost = subPoset(stTrees, treeSample1, compLeafSet, rank_anchor);
     
+    //----- Computing eta's lower bounds -------------//
+    
+    vector<float> etasLowerBounds;
+    
+    for (spNode spN : subPost.Poset){
+        pTree Ta = spN.Tree;
+        
+        vector<pTree> Tbs = coverTrees(Ta, compLeafSet);
+        
+        int nTbs = static_cast<int>(Tbs.size());
+        
+        int sumOfIndicators = 0;
+        
+        for (pTree T : treeSample1){
+            int rhoTa = rho(Ta, T);
+            for (pTree Tb : Tbs){
+                sumOfIndicators += (int)(rho(Tb,T) > rhoTa);
+            }
+        }
+        for (pTree T : treeSample2){
+            int rhoTa = rho(Ta,T);
+            for (pTree Tb : Tbs){
+                sumOfIndicators += (int)(rho(Tb,T) > rhoTa);
+            }
+        }
+        
+        etasLowerBounds.push_back(1 - static_cast<float>(sumOfIndicators)/(static_cast<float>(nTbs*(B1+B2))));
+    }
+    
+    {
+        pTree Ta = pTree("();");
+        
+        vector<pTree> Tbs = coverTrees(Ta, compLeafSet);
+        
+        int nTbs = static_cast<int>(Tbs.size());
+        
+        int sumOfIndicators = 0;
+        
+        for (pTree T : treeSample1){
+            int rhoTa = rho(Ta, T);
+            for (pTree Tb : Tbs){
+                sumOfIndicators += (int)(rho(Tb,T) > rhoTa);
+            }
+        }
+        for (pTree T : treeSample2){
+            int rhoTa = rho(Ta,T);
+            for (pTree Tb : Tbs){
+                sumOfIndicators += (int)(rho(Tb,T) > rhoTa);
+            }
+        }
+        
+        etasLowerBounds.push_back(1 - static_cast<float>(sumOfIndicators)/(static_cast<float>(nTbs*(B1+B2))));
+    }
+    
+    //------------------------------------------------//
+    
     vector<string> subPosetTrees;
     vector<int> subPosetRanks;
     vector<int> subPosetKappas;
@@ -136,15 +195,18 @@ Rcpp::List SPAnalysisR(CharacterVector treeStar,
         Rcpp::Named("subPosetTrees")       = Rcpp::wrap(subPosetTrees),
         Rcpp::Named("subPosetRanks")       = Rcpp::wrap(subPosetRanks),
         Rcpp::Named("subPosetKappas")       = Rcpp::wrap(subPosetKappas),
+        Rcpp::Named("EtasLowerBounds")  = Rcpp::wrap(etasLowerBounds),
         Rcpp::Named("CoveringPairsLower")  = edgeFrom,
         Rcpp::Named("CoveringPairsUpper")  = edgeTo,
         Rcpp::Named("nullCovering")     = Rcpp::wrap(allResults.nullCovering),
+        Rcpp::Named("etaValues")        = Rcpp::wrap(allResults.etaValues),
         Rcpp::Named("coveringMeans")    = Rcpp::wrap(allResults.coveringMean),
         Rcpp::Named("coveringVariance") = Rcpp::wrap(allResults.coveringVariance),
         Rcpp::Named("nullCoveringProb") = allResults.nullCoveringProb,
         Rcpp::Named("minLower")         = allResults.minLower,
         Rcpp::Named("minUpper")         = allResults.minUpper,
         Rcpp::Named("RademacherComplexity") = allResults.RademacherComplex,
+        Rcpp::Named("RademacherComplexity2") = allResults.RademacherComplex2,
         Rcpp::Named("kappaThresholds05") = Rcpp::wrap(allResults.kappa_Ts_05),
         Rcpp::Named("kappaThresholdsP") = Rcpp::wrap(allResults.kappa_Ts_p),
         Rcpp::Named("radThresholds05") = Rcpp::wrap(allResults.rad_Ts_05),
@@ -165,6 +227,8 @@ Rcpp::List SPAnalysisR2(CharacterVector treeStar,
     
     std::vector<pTree> treeSample1;
     treeSample1.reserve(treeSample1R.size());
+    
+    int B1 = treeSample1R.size();
 
     for (int i = 0; i < treeSample1R.size(); i++) {
         if (treeSample1R[i] == NA_STRING)
@@ -228,6 +292,62 @@ Rcpp::List SPAnalysisR2(CharacterVector treeStar,
     
     subPoset subPost = subPoset(treeSample1, compLeafSet, Mt, rb);
     
+    //----- Computing eta's lower bounds -------------//
+    
+    vector<float> etasLowerBounds;
+    
+    for (spNode spN : subPost.Poset){
+        pTree Ta = spN.Tree;
+        
+        vector<pTree> Tbs = coverTrees(Ta, compLeafSet);
+        
+        int nTbs = static_cast<int>(Tbs.size());
+        
+        int sumOfIndicators = 0;
+        
+        for (pTree T : treeSample1){
+            int rhoTa = rho(Ta, T);
+            for (pTree Tb : Tbs){
+                sumOfIndicators += (int)(rho(Tb,T) > rhoTa);
+            }
+        }
+        for (pTree T : treeSample2){
+            int rhoTa = rho(Ta,T);
+            for (pTree Tb : Tbs){
+                sumOfIndicators += (int)(rho(Tb,T) > rhoTa);
+            }
+        }
+        
+        etasLowerBounds.push_back(1 - static_cast<float>(sumOfIndicators)/(static_cast<float>(nTbs*(B1+B2))));
+    }
+    
+    {
+        pTree Ta = pTree("();");
+        
+        vector<pTree> Tbs = coverTrees(Ta, compLeafSet);
+        
+        int nTbs = static_cast<int>(Tbs.size());
+        
+        int sumOfIndicators = 0;
+        
+        for (pTree T : treeSample1){
+            int rhoTa = rho(Ta, T);
+            for (pTree Tb : Tbs){
+                sumOfIndicators += (int)(rho(Tb,T) > rhoTa);
+            }
+        }
+        for (pTree T : treeSample2){
+            int rhoTa = rho(Ta,T);
+            for (pTree Tb : Tbs){
+                sumOfIndicators += (int)(rho(Tb,T) > rhoTa);
+            }
+        }
+        
+        etasLowerBounds.push_back(1 - static_cast<float>(sumOfIndicators)/(static_cast<float>(nTbs*(B1+B2))));
+    }
+    
+    //------------------------------------------------//
+    
     vector<string> subPosetTrees;
     vector<int> subPosetRanks;
     vector<int> subPosetKappas;
@@ -253,15 +373,18 @@ Rcpp::List SPAnalysisR2(CharacterVector treeStar,
         Rcpp::Named("subPosetTrees")       = Rcpp::wrap(subPosetTrees),
         Rcpp::Named("subPosetRanks")       = Rcpp::wrap(subPosetRanks),
         Rcpp::Named("subPosetKappas")       = Rcpp::wrap(subPosetKappas),
+        Rcpp::Named("EtasLowerBounds")  = Rcpp::wrap(etasLowerBounds),
         Rcpp::Named("CoveringPairsLower")  = edgeFrom,
         Rcpp::Named("CoveringPairsUpper")  = edgeTo,
         Rcpp::Named("nullCovering")     = Rcpp::wrap(allResults.nullCovering),
+        Rcpp::Named("etaValues")        = Rcpp::wrap(allResults.etaValues),
         Rcpp::Named("coveringMeans")    = Rcpp::wrap(allResults.coveringMean),
         Rcpp::Named("coveringVariance") = Rcpp::wrap(allResults.coveringVariance),
         Rcpp::Named("nullCoveringProb") = allResults.nullCoveringProb,
         Rcpp::Named("minLower")         = allResults.minLower,
         Rcpp::Named("minUpper")         = allResults.minUpper,
         Rcpp::Named("RademacherComplexity") = allResults.RademacherComplex,
+        Rcpp::Named("RademacherComplexity2") = allResults.RademacherComplex2,
         Rcpp::Named("kappaThresholds05") = Rcpp::wrap(allResults.kappa_Ts_05),
         Rcpp::Named("kappaThresholdsP") = Rcpp::wrap(allResults.kappa_Ts_p),
         Rcpp::Named("radThresholds05") = Rcpp::wrap(allResults.rad_Ts_05),
@@ -334,7 +457,8 @@ Rcpp::List SPAnalysisRS(CharacterVector treeStar,
     for (int i = 0; i < nBSampleR.size(); i++){
         nBSample.push_back(static_cast<int>(nBSampleR[i]));
     }
-
+    
+    int B1 = std::accumulate(nSample1.begin(), nSample1.end(), 0);
     int B2 = std::accumulate(nSample2.begin(), nSample2.end(), 0);
     
     //
@@ -373,6 +497,67 @@ Rcpp::List SPAnalysisRS(CharacterVector treeStar,
     
     subPoset subPost = subPoset(stTrees, treeSample1, nSample1, compLeafSet, rank_anchor);
     
+    //----- Computing eta's lower bounds -------------//
+    
+    vector<float> etasLowerBounds;
+    
+    for (spNode spN : subPost.Poset){
+        pTree Ta = spN.Tree;
+        
+        vector<pTree> Tbs = coverTrees(Ta, compLeafSet);
+        
+        int nTbs = static_cast<int>(Tbs.size());
+        
+        int sumOfIndicators = 0;
+        
+        for (int k = 0; k < treeSample1.size(); k++){
+            pTree T = treeSample1.at(k);
+            int rhoTa = rho(Ta, T);
+            for (pTree Tb : Tbs){
+                sumOfIndicators += nSample1.at(k)*((int)(rho(Tb,T) > rhoTa));
+            }
+        }
+        for (int k = 0; k < treeSample2.size(); k++){
+            pTree T = treeSample2.at(k);
+            int rhoTa = rho(Ta,T);
+            for (pTree Tb : Tbs){
+                sumOfIndicators += nSample2.at(k)*((int)(rho(Tb,T) > rhoTa));
+            }
+        }
+        
+        etasLowerBounds.push_back(1 - static_cast<float>(sumOfIndicators)/(static_cast<float>(nTbs*(B1+B2))));
+    }
+    
+    {
+        pTree Ta = pTree("();");
+        
+        vector<pTree> Tbs = coverTrees(Ta, compLeafSet);
+        
+        int nTbs = static_cast<int>(Tbs.size());
+        
+        int sumOfIndicators = 0;
+        
+        for (int k = 0; k < treeSample1.size(); k++){
+            pTree T = treeSample1.at(k);
+            int rhoTa = rho(Ta, T);
+            for (pTree Tb : Tbs){
+                sumOfIndicators += nSample1.at(k)*((int)(rho(Tb,T) > rhoTa));
+            }
+        }
+        
+        for (int k = 0; k < treeSample2.size(); k++){
+            pTree T = treeSample2.at(k);
+            int rhoTa = rho(Ta,T);
+            for (pTree Tb : Tbs){
+                sumOfIndicators += nSample2.at(k)*((int)(rho(Tb,T) > rhoTa));
+            }
+        }
+        
+        etasLowerBounds.push_back(1 - static_cast<float>(sumOfIndicators)/(static_cast<float>(nTbs*(B1+B2))));
+    }
+    
+    //------------------------------------------------//
+    
     vector<string> subPosetTrees;
     vector<int> subPosetRanks;
     vector<int> subPosetKappas;
@@ -398,15 +583,18 @@ Rcpp::List SPAnalysisRS(CharacterVector treeStar,
         Rcpp::Named("subPosetTrees")       = Rcpp::wrap(subPosetTrees),
         Rcpp::Named("subPosetRanks")       = Rcpp::wrap(subPosetRanks),
         Rcpp::Named("subPosetKappas")       = Rcpp::wrap(subPosetKappas),
+        Rcpp::Named("EtasLowerBounds")  = Rcpp::wrap(etasLowerBounds),
         Rcpp::Named("CoveringPairsLower")  = edgeFrom,
         Rcpp::Named("CoveringPairsUpper")  = edgeTo,
         Rcpp::Named("nullCovering")     = Rcpp::wrap(allResults.nullCovering),
+        Rcpp::Named("etaValues")        = Rcpp::wrap(allResults.etaValues),
         Rcpp::Named("coveringMeans")    = Rcpp::wrap(allResults.coveringMean),
         Rcpp::Named("coveringVariance") = Rcpp::wrap(allResults.coveringVariance),
         Rcpp::Named("nullCoveringProb") = allResults.nullCoveringProb,
         Rcpp::Named("minLower")         = allResults.minLower,
         Rcpp::Named("minUpper")         = allResults.minUpper,
         Rcpp::Named("RademacherComplexity") = allResults.RademacherComplex,
+        Rcpp::Named("RademacherComplexity2") = allResults.RademacherComplex2,
         Rcpp::Named("kappaThresholds05") = Rcpp::wrap(allResults.kappa_Ts_05),
         Rcpp::Named("kappaThresholdsP") = Rcpp::wrap(allResults.kappa_Ts_p),
         Rcpp::Named("radThresholds05") = Rcpp::wrap(allResults.rad_Ts_05),
@@ -480,6 +668,10 @@ Rcpp::List SPAnalysisR2S(CharacterVector treeStar,
         nBSample.push_back(static_cast<int>(nBSampleR[i]));
     }
     
+    
+    int B1 = std::accumulate(nSample1.begin(), nSample1.end(), 0);
+    int B2 = std::accumulate(nSample2.begin(), nSample2.end(), 0);
+    
     //
     // 2. Convert compLeafSetR → set<string>
     //
@@ -508,6 +700,68 @@ Rcpp::List SPAnalysisR2S(CharacterVector treeStar,
     
     subPoset subPost = subPoset(treeSample1, nSample1, compLeafSet, Mt, rb);
     
+    
+    //----- Computing eta's lower bounds -------------//
+    
+    vector<float> etasLowerBounds;
+    
+    for (spNode spN : subPost.Poset){
+        pTree Ta = spN.Tree;
+        
+        vector<pTree> Tbs = coverTrees(Ta, compLeafSet);
+        
+        int nTbs = static_cast<int>(Tbs.size());
+        
+        int sumOfIndicators = 0;
+        
+        for (int k = 0; k < treeSample1.size(); k++){
+            pTree T = treeSample1.at(k);
+            int rhoTa = rho(Ta, T);
+            for (pTree Tb : Tbs){
+                sumOfIndicators += nSample1.at(k)*((int)(rho(Tb,T) > rhoTa));
+            }
+        }
+        for (int k = 0; k < treeSample2.size(); k++){
+            pTree T = treeSample2.at(k);
+            int rhoTa = rho(Ta,T);
+            for (pTree Tb : Tbs){
+                sumOfIndicators += nSample2.at(k)*((int)(rho(Tb,T) > rhoTa));
+            }
+        }
+        
+        etasLowerBounds.push_back(1 - static_cast<float>(sumOfIndicators)/(static_cast<float>(nTbs*(B1+B2))));
+    }
+    
+    {
+        pTree Ta = pTree("();");
+        
+        vector<pTree> Tbs = coverTrees(Ta, compLeafSet);
+        
+        int nTbs = static_cast<int>(Tbs.size());
+        
+        int sumOfIndicators = 0;
+        
+        for (int k = 0; k < treeSample1.size(); k++){
+            pTree T = treeSample1.at(k);
+            int rhoTa = rho(Ta, T);
+            for (pTree Tb : Tbs){
+                sumOfIndicators += nSample1.at(k)*((int)(rho(Tb,T) > rhoTa));
+            }
+        }
+        
+        for (int k = 0; k < treeSample2.size(); k++){
+            pTree T = treeSample2.at(k);
+            int rhoTa = rho(Ta,T);
+            for (pTree Tb : Tbs){
+                sumOfIndicators += nSample2.at(k)*((int)(rho(Tb,T) > rhoTa));
+            }
+        }
+        
+        etasLowerBounds.push_back(1 - static_cast<float>(sumOfIndicators)/(static_cast<float>(nTbs*(B1+B2))));
+    }
+    
+    //------------------------------------------------//
+    
     vector<string> subPosetTrees;
     vector<int> subPosetRanks;
     vector<int> subPosetKappas;
@@ -533,15 +787,18 @@ Rcpp::List SPAnalysisR2S(CharacterVector treeStar,
         Rcpp::Named("subPosetTrees")       = Rcpp::wrap(subPosetTrees),
         Rcpp::Named("subPosetRanks")       = Rcpp::wrap(subPosetRanks),
         Rcpp::Named("subPosetKappas")       = Rcpp::wrap(subPosetKappas),
+        Rcpp::Named("EtasLowerBounds")  = Rcpp::wrap(etasLowerBounds),
         Rcpp::Named("CoveringPairsLower")  = edgeFrom,
         Rcpp::Named("CoveringPairsUpper")  = edgeTo,
         Rcpp::Named("nullCovering")     = Rcpp::wrap(allResults.nullCovering),
+        Rcpp::Named("etaValues")        = Rcpp::wrap(allResults.etaValues),
         Rcpp::Named("coveringMeans")    = Rcpp::wrap(allResults.coveringMean),
         Rcpp::Named("coveringVariance") = Rcpp::wrap(allResults.coveringVariance),
         Rcpp::Named("nullCoveringProb") = allResults.nullCoveringProb,
         Rcpp::Named("minLower")         = allResults.minLower,
         Rcpp::Named("minUpper")         = allResults.minUpper,
         Rcpp::Named("RademacherComplexity") = allResults.RademacherComplex,
+        Rcpp::Named("RademacherComplexity2") = allResults.RademacherComplex2,
         Rcpp::Named("kappaThresholds05") = Rcpp::wrap(allResults.kappa_Ts_05),
         Rcpp::Named("kappaThresholdsP") = Rcpp::wrap(allResults.kappa_Ts_p),
         Rcpp::Named("radThresholds05") = Rcpp::wrap(allResults.rad_Ts_05),

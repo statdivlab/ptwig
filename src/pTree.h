@@ -17,6 +17,12 @@ class Split{//This object represents an edge in the tree, by having two sets of 
     
     Split(std::set<std::string> inputSet1, std::set<std::string> inputSet2);
     
+    // Trusted constructor: skips the disjointness check in the normal
+    // constructor. Only use when you know side1 and side2 are already
+    // disjoint (e.g. results coming out of TDR).
+    Split(std::set<std::string> inputSet1, std::set<std::string> inputSet2,
+          bool trusted);
+    
     bool operator<(const Split& other) const;
     
     bool operator==(const Split& other) const;
@@ -28,12 +34,16 @@ class Split{//This object represents an edge in the tree, by having two sets of 
     std::string printSt() const;
     
     Split TDR(std::set<std::string> L);
+    Split TDR(std::set<std::string> L) const;        // const overload for rho
     
     bool isInternal();
+    bool isInternal() const;                         // const overload for rho
     
     std::set<std::string> LeavesInSplit();
+    std::set<std::string> LeavesInSplit() const;     // const overload for rho
     
     bool contains(Split otherS);
+    bool contains(Split otherS) const;               // const overload for rho
 };
 
 // =====================
@@ -69,7 +79,10 @@ class pTree{
     pTree Remove(std::string a);
     
     pTree Insert(Split s);
+    pTree Insert(Split s) const;                     // const overload for rho
 
+    pTree InsertCached(const Split& s, const std::set<std::string>& sLeaves);
+    
     int returnRank();
     
     int returnComplexity();
@@ -79,5 +92,7 @@ class pTree{
     bool covers(pTree tOther);
     
 };
+
+pTree commonLower(pTree T1, pTree T2, std::set<std::string> sLeaves);
 
 #endif

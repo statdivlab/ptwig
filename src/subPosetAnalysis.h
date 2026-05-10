@@ -12,11 +12,13 @@ struct subPosetOutput {
     int minUpper; // Member of the null covering pair that is covering where minimum was achieved.
     std::vector<std::pair<int,int>> edges;     // Covering pairs in subposet (under, over)
     std::vector<bool>        nullCovering;     // Indicator saying if the covering pair is null with respect to the target tree
+    std::vector<float>        etaValues; // Vector containing the eta values for each edge
     std::vector<float>       coveringMean;    // Sample mean of not-null indicator
     std::vector<float>       coveringVariance; // Sample variance of not-null indicator
     std::vector<float>       nullProbabilities; //Estimated of the probability of pair classified as null
     std::vector<float>       AddedNotNullProbs; //Estimated value for lower probs
     float     RademacherComplex; // Estimated bound for the Rademacher Complexity 
+    float     RademacherComplex2;
     std::vector<float>  kappa_Ts_05;
     std::vector<float>  kappa_Ts_p;
     std::vector<float>  rad_Ts_05;

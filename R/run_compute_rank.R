@@ -59,13 +59,14 @@ run_compute_rank <- function(newicks = NULL,file = NULL) {
     
     # Remove branch lengths (set to NULL so ape::write.tree does not print them)
     tr$edge.length <- NULL
+    tr$node.label <- NULL
     tr
   })
   
   cleaned_newicks <- vapply(trees, ape::write.tree, FUN.VALUE = character(1))
   
   ## --- Computing the rank for every tree in the list -----------------------
-  res <- lapply(cleaned_newicks, computeRank);
+  res <- sapply(cleaned_newicks, computeRank);
   
   return(res)
 }

@@ -92,6 +92,7 @@ run_compute_similarity <- function(newicks1 = NULL, newicks2 = NULL,
     
     # Remove branch lengths (set to NULL so ape::write.tree does not print them)
     tr$edge.length <- NULL
+    tr$node.label <- NULL
     tr
   })
   
@@ -103,6 +104,7 @@ run_compute_similarity <- function(newicks1 = NULL, newicks2 = NULL,
     
     # Remove branch lengths (set to NULL so ape::write.tree does not print them)
     tr$edge.length <- NULL
+    tr$node.label <- NULL
     tr
   })
   
@@ -112,10 +114,19 @@ run_compute_similarity <- function(newicks1 = NULL, newicks2 = NULL,
   ## --- Computing the similarity for every tree in the first list against tree(s) in second list ---
   
   if (n2 == 1){
-    res <- lapply(cleaned_newicks1, function(x) computeSimilarity(x, cleaned_newicks2[1]));
+    #Time1 <- Sys.time()
+    res <- sapply(cleaned_newicks1, function(x) computeSimilarity(x, cleaned_newicks2[1]));
+    #Time2 <- Sys.time()
+    #res2 <- sapply(cleaned_newicks1, function(x) computeSimilarity2(x, cleaned_newicks2[1]));
+    #Time3 <- Sys.time()
   } else {
-    res <- lapply((1:n1), function(x) computeSimilarity(cleaned_newicks1[x],cleaned_newicks2[x]))
+    #Time1 <- Sys.time()
+    res <- sapply((1:n1), function(x) computeSimilarity(cleaned_newicks1[x],cleaned_newicks2[x]))
+    #Time2 <- Sys.time()
+    #res2 <- sapply((1:n1), function(x) computeSimilarity2(cleaned_newicks1[x],cleaned_newicks2[x]))
+    #Time3 <- Sys.time()
   }
   
+  #return(list("rho1" = res, "Time 1" = (Time2 - Time1), "rho2" = res2, "Time 2" = (Time3 - Time2)))
   return(res)
 }

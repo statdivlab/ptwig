@@ -51,6 +51,18 @@ Split::Split(set<string> inputSet1, set<string> inputSet2){
         cout << "Not an actual split. It keeps it empty \n";
     }
 }
+
+// Trusted constructor — skips the disjointness check.
+// Only use when sets are guaranteed disjoint (e.g. from TDR).
+Split::Split(set<string> inputSet1, set<string> inputSet2, bool trusted){
+    if (inputSet1 < inputSet2){
+        side1 = std::move(inputSet1);
+        side2 = std::move(inputSet2);
+    } else {
+        side1 = std::move(inputSet2);
+        side2 = std::move(inputSet1);
+    }
+}
     
 bool Split::operator<(const Split& other) const {//Operation that defines which edge goes first in order
     if (side1 < other.side1){
@@ -114,19 +126,39 @@ string Split::printSt() const{
 Split Split::TDR(set<string> L){
     set<string> intersection1;
     set<string> intersection2;
-
+ 
     set_intersection(side1.begin(), side1.end(),
                      L.begin(), L.end(),
                      inserter(intersection1, intersection1.begin()));
-
+ 
     set_intersection(side2.begin(), side2.end(),
                      L.begin(), L.end(),
                      inserter(intersection2, intersection2.begin()));
-
-    return Split(intersection1, intersection2);
+ 
+    // Results are disjoint by construction (side1, side2 are disjoint and
+    // we intersect each with L independently), so use the trusted constructor
+    // to skip the redundant disjointness check.
+    return Split(intersection1, intersection2, true);
 }
 
+Split Split::TDR(set<string> L) const {
+    set<string> intersection1;
+    set<string> intersection2;
+    set_intersection(side1.begin(), side1.end(),
+                     L.begin(), L.end(),
+                     inserter(intersection1, intersection1.begin()));
+    set_intersection(side2.begin(), side2.end(),
+                     L.begin(), L.end(),
+                     inserter(intersection2, intersection2.begin()));
+    return Split(intersection1, intersection2,true);
+}
+ 
+
 bool Split::isInternal(){
+    return ((side1.size() > 1) && (side2.size() > 1));
+}
+
+bool Split::isInternal() const {
     return ((side1.size() > 1) && (side2.size() > 1));
 }
 
@@ -139,8 +171,20 @@ set<string> Split::LeavesInSplit(){
     return UnionLeaves;
 }
 
+set<string> Split::LeavesInSplit() const {
+    set<string> UnionLeaves;
+    set_union(side1.begin(), side1.end(),
+              side2.begin(), side2.end(),
+              inserter(UnionLeaves, UnionLeaves.begin()));
+    return UnionLeaves;
+}
+
 bool Split::contains(Split otherS){
     return ( TDR(otherS.LeavesInSplit()) == otherS); //Checks if the splits coincide in the presummably smaller set of leaves in otherS.
+}
+
+bool Split::contains(Split otherS) const {
+    return (TDR(otherS.LeavesInSplit()) == otherS);
 }
 
 
@@ -349,9 +393,52 @@ pTree pTree::Insert(Split s){
     }
     Split nS = s.TDR(commonLeaves);
     if (nS.isInternal()){
-        nwSplits.insert(nS.TDR(commonLeaves));
+        nwSplits.insert(nS);
     }
 
+    return pTree(commonLeaves, nwSplits);
+}
+
+pTree pTree::Insert(Split s) const {
+    set<string> commonLeaves;
+    const auto& leavesInS = s.LeavesInSplit();
+    set_intersection(leafSet.begin(), leafSet.end(),
+                     leavesInS.begin(), leavesInS.end(),
+                     inserter(commonLeaves, commonLeaves.begin()));
+ 
+    set<Split> nwSplits;
+    for (const Split& st : intSplits) {
+        Split nSt = st.TDR(commonLeaves);
+        if (nSt.isInternal()) {
+            nwSplits.insert(nSt);
+        }
+    }
+    Split nS = s.TDR(commonLeaves);
+    if (nS.isInternal()) {
+        nwSplits.insert(nS);
+    }
+ 
+    return pTree(commonLeaves, nwSplits);
+}
+   
+pTree pTree::InsertCached(const Split& s, const set<string>& sLeaves) {
+    set<string> commonLeaves;
+    set_intersection(leafSet.begin(), leafSet.end(),
+                     sLeaves.begin(), sLeaves.end(),
+                     inserter(commonLeaves, commonLeaves.begin()));
+ 
+    set<Split> nwSplits;
+    for (Split st : intSplits) {
+        Split nSt = st.TDR(commonLeaves);
+        if (nSt.isInternal()) {
+            nwSplits.insert(nSt);
+        }
+    }
+    Split nS = s.TDR(commonLeaves);
+    if (nS.isInternal()) {
+        nwSplits.insert(nS);
+    }
+ 
     return pTree(commonLeaves, nwSplits);
 }
 
@@ -383,4 +470,17 @@ bool pTree::covers(pTree tOther){
         return true;
     }
     return false;
+}
+
+pTree commonLower(pTree T1, pTree T2, set<string> sLeaves){
+    pTree R1 = T1.TDR(sLeaves);
+    pTree R2 = T2.TDR(sLeaves);
+    
+    set<Split> nwIntSplits;
+    set_intersection(R1.intSplits.begin(), R1.intSplits.end(),
+                     R2.intSplits.begin(), R2.intSplits.end(),
+                     inserter(nwIntSplits, nwIntSplits.begin()));
+    
+    return pTree(sLeaves, nwIntSplits);
+    
 }

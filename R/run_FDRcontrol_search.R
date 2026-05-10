@@ -7,10 +7,13 @@
 #' @param file1 Path to a file containing Newick trees for Stable Search (optional)
 #' @param file2 Path to a file containing Newick trees for FDR control Search (optional)
 #' @param n1 Number of trees to be used for Stable Search (optional)
-#' @param random_subsampling Boolean indicating if the subsampling is to be made random 
+#' @param random_subsampling Boolean indicating if the subsampling is to be made random
+#' @param SPbuilder String indication what method to use to build subposet.
 #' @param alpha Numeric value passed to Stable Search for stable threshold.
 #' @param q Numeric value passed to FDR control purposes.
 #' @param tau Extra value for subposet building.
+#' @param Mt Number of maximal trees for basic-bifurcation subposet building
+#' @param rb Anchor rank for basic-bifurcation subposet building
 #' @param summarized Boolean factor indicating if the function is to be runned with a summarized version of the sample
 #'
 #' @return Output of completeSearchRcpp
@@ -21,7 +24,9 @@ run_FDRcontrol_search <- function(newicks = NULL, newicks1 = NULL, newicks2 = NU
                                   file = NULL, file1 = NULL, file2 = NULL, 
                                   n1 = NULL,
                                   random_subsampling = FALSE,
-                                  alpha = 0.85, q = 0.1, tau = 0.95, 
+                                  SPbuilder = "stability",
+                                  alpha = 0.85, q = 0.1, tau = 0.80, 
+                                  Mt = 1, rb = NULL,
                                   summarized = FALSE) {
   
   ## --- Argument validation -------------------------------------------------
@@ -72,6 +77,15 @@ run_FDRcontrol_search <- function(newicks = NULL, newicks1 = NULL, newicks2 = NU
         "6. `file2` AND `newicks1` are provided"
       )
     }
+  }
+  
+  if ((SPbuilder != "stability") && (SPbuilder != "basic") && (SPbuilder != "basic_auto")){
+    stop(
+      "The subPoset builder method must be a valid option. It is either:\n",
+      "SPbuilder = 'stability': Building a stable tree first and branching out from there\n",
+      "SPbuilder = 'basic': For basic bifurcation with known number of maximal trees and bifurcation rank level.",
+      "SPbuilder = 'basic_auto': For basic bifurcation with automatic selection of maximal trees and bifurcation rank level."
+    )
   }
   
   ## --- Read trees from files (if provided) ---------------------------------
@@ -127,6 +141,7 @@ run_FDRcontrol_search <- function(newicks = NULL, newicks1 = NULL, newicks2 = NU
     
     # Remove branch lengths (set to NULL so ape::write.tree does not print them)
     tr$edge.length <- NULL
+    tr$node.label <- NULL
     tr
   })
   
@@ -192,20 +207,84 @@ run_FDRcontrol_search <- function(newicks = NULL, newicks1 = NULL, newicks2 = NU
     cleaned_newicks2 <- vapply(Unique_trees2, ape::write.tree, FUN.VALUE = character(1))
     
     ## --- Call your Rcpp backend ----------------------------------------------
-    res <- completeSearchRcppS(treeSample1R = cleaned_newicks1, nSample1R = Count_trees1, 
-                               treeSample2R = cleaned_newicks2, nSample2R = Count_trees2, 
-                               compLeafSetR = completeLeaveSet, 
-                               alphaR = alpha, qR = q, tauR = tau)
+    if (SPbuilder == "stability"){
+      res <- completeSearchRcppS(treeSample1R = cleaned_newicks1, nSample1R = Count_trees1, 
+                          treeSample2R = cleaned_newicks2, nSample2R = Count_trees2, 
+                          compLeafSetR = completeLeaveSet, 
+                          alphaR = alpha, qR = q, tauR = tau)
+      
+    } else if (SPbuilder == "basic") {
+      if (is.null(rb)){
+        rb = length(completeLeaveSet) - 4;
+      }
+      
+      res <-  completeSearchRcppS_V2(treeSample1R = cleaned_newicks1, nSample1R = Count_trees1,
+                                      treeSample2R = cleaned_newicks2, nSample2R = Count_trees2,
+                                      compLeafSetR = completeLeaveSet,
+                                      MtR = Mt, rbR = rb, qR = q)
+    } else if (SPbuilder == "basic_auto") {
+        r_max = 2*length(completeLeaveSet) - 7
+        r_anchor = floor((log(q) + sum(Count_trees2)*(tau-0.5)*(tau-0.5))/log(2))
+        
+        if (r_anchor > r_max){
+          Mt = min(2^(r_anchor - r_max), 2^(length(completeLeaveSet)-4))
+          rb = r_max
+        } else {
+          Mt = 1
+          rb = r_anchor
+        }
+        
+        print(paste("The automatic selection of number of Maximal Trees for basic subposet building returned", Mt, "\n", sep = " "))
+        print(paste("The automatic selection of anchor rank for basic subposet building returned", rb, "\n", sep = " "))
+        
+        res <-  completeSearchRcppS_V2(treeSample1R = cleaned_newicks1, nSample1R = Count_trees1,
+                                       treeSample2R = cleaned_newicks2, nSample2R = Count_trees2,
+                                       compLeafSetR = completeLeaveSet,
+                                       MtR = Mt, rbR = rb, qR = q)
+    }
+    
   } else {
     ## --- Write cleaned trees back to Newick strings ---------------------------
     cleaned_newicks1 <- vapply(trees1, ape::write.tree, FUN.VALUE = character(1))
     cleaned_newicks2 <- vapply(trees2, ape::write.tree, FUN.VALUE = character(1))
     
     ## --- Call your Rcpp backend ----------------------------------------------
-    res <- completeSearchRcpp(treeSample1R = cleaned_newicks1, 
-                               treeSample2R = cleaned_newicks2,
-                               compLeafSetR = completeLeaveSet, 
-                               alphaR = alpha, qR = q, tauR = tau)
+    if (SPbuilder == "stability"){
+      res <- completeSearchRcpp(treeSample1R = cleaned_newicks1,
+                                 treeSample2R = cleaned_newicks2, 
+                                 compLeafSetR = completeLeaveSet, 
+                                 alphaR = alpha, qR = q, tauR = tau)
+      
+    } else if (SPbuilder == "basic") {
+      if (is.null(rb)){
+        rb = length(completeLeaveSet) - 4;
+      }
+      
+      res <-  completeSearchRcpp_V2(treeSample1R = cleaned_newicks1, 
+                                     treeSample2R = cleaned_newicks2, 
+                                     compLeafSetR = completeLeaveSet,
+                                     MtR = Mt, rbR = rb, qR = q)
+      
+    } else if (SPbuilder == "basic_auto") {
+      r_max = 2*length(completeLeaveSet) - 7
+      r_anchor = floor((log(q) + length(cleaned_newicks2)*(tau-0.5)*(tau-0.5))/log(2))
+      
+      if (r_anchor > r_max){
+        Mt = 2^(r_anchor - r_max)
+        rb = r_max
+      } else {
+        Mt = 1
+        rb = r_anchor
+      }
+      
+      print(paste("The automatic selection of number of Maximal Trees for basic subposet building returned", Mt, "\n", sep = " "))
+      print(paste("The automatic selection of anchor rank for basic subposet building returned", rb, "\n", sep = " "))
+      
+      res <-  completeSearchRcpp_V2(treeSample1R = cleaned_newicks1,
+                                     treeSample2R = cleaned_newicks2,
+                                     compLeafSetR = completeLeaveSet,
+                                     MtR = Mt, rbR = rb, qR = q)
+    }
   }
   
   return(res)

@@ -92,6 +92,7 @@ run_compute_FD <- function(newicks1 = NULL, newicks2 = NULL,
     
     # Remove branch lengths (set to NULL so ape::write.tree does not print them)
     tr$edge.length <- NULL
+    tr$node.label <- NULL
     tr
   })
   
@@ -103,6 +104,7 @@ run_compute_FD <- function(newicks1 = NULL, newicks2 = NULL,
     
     # Remove branch lengths (set to NULL so ape::write.tree does not print them)
     tr$edge.length <- NULL
+    tr$node.label <- NULL
     tr
   })
   
@@ -112,9 +114,9 @@ run_compute_FD <- function(newicks1 = NULL, newicks2 = NULL,
   ## --- Computing the similarity for every tree in the first list against tree(s) in second list ---
   
   if (n2 == 1){
-    res <- lapply(cleaned_newicks1, function(x) computeFD(x, cleaned_newicks2[1]));
+    res <- sapply(cleaned_newicks1, function(x) computeFD(x, cleaned_newicks2[1]));
   } else {
-    res <- lapply((1:n1), function(x) computeFD(cleaned_newicks1[x],cleaned_newicks2[x]))
+    res <- sapply((1:n1), function(x) computeFD(cleaned_newicks1[x],cleaned_newicks2[x]))
   }
   
   return(res)

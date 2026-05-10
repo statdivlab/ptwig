@@ -46,36 +46,40 @@ void spNode::setKappa(int newKappa){
     kappa = newKappa;
 }
 
+void spNode::setLBE (float newLBE){
+    lbEta = newLBE;
+}
+
 void spNode::print(){
-    cout << "This node with kappa " + to_string(kappa) + " has tree \n";
+    cout << "This node with kappa " + to_string(kappa) + " has tree \n"<< std::flush;
     Tree.print();
     cout << "\n parents: [";
     for (int i : over){
         cout << to_string(i) << ", ";
     }
-    cout << "] \n";
+    cout << "] \n"<< std::flush;
     cout << "children: [";
     for (int i : under){
         cout << to_string(i) << ", ";
     }
-    cout << "] \n";
-    cout << "Next: "<< to_string(next) << " \n";
+    cout << "] \n"<< std::flush;
+    cout << "Next: "<< to_string(next) << " \n"<< std::flush;
 
 }
 
 void spNode::printRd(){
-    cout << "This node with kappa " + to_string(kappa) + " \n";
+    cout << "This node with kappa " + to_string(kappa) + " \n"<< std::flush;
     cout << "\n parents: [";
     for (int i : over){
         cout << to_string(i) << ", ";
     }
-    cout << "] \n";
+    cout << "] \n"<< std::flush;
     cout << "children: [";
     for (int i : under){
         cout << to_string(i) << ", ";
     }
-    cout << "] \n";
-    cout << "Next: "<< to_string(next) << " \n";
+    cout << "] \n"<< std::flush;
+    cout << "Next: "<< to_string(next) << " \n"<< std::flush;
 }
     
 subPoset::subPoset(vector<pTree> initT, vector<pTree> Sample, set<string> compLeafSet, int rb){
@@ -84,6 +88,7 @@ subPoset::subPoset(vector<pTree> initT, vector<pTree> Sample, set<string> compLe
     lastRank = std::vector<int>(rmax+1, -1);
 
     Poset.push_back(spNode(initT.at(0)));
+    cout << "Subposet node " << 0 << " added \n"<< std::flush;
     firstRank.at(initT.at(0).rank) = 0;
     lastRank.at(initT.at(0).rank) = 0;
 
@@ -99,10 +104,11 @@ subPoset::subPoset(vector<pTree> initT, vector<pTree> Sample, set<string> compLe
         Poset.at(lastRank.at(initRank)).setNext(i);
         lastRank.at(initRank) = i;
         Poset.push_back(spNode(initT.at(i)));
+        cout << "Subposet node " << i << " added \n"<< std::flush;
     }
 
     //Creating things above the initial trees.
-
+    cout << "Creating things above initial trees in SubPoset \n"<< std::flush;
     int curRank = initRank;
     int B = static_cast<int>(Sample.size());
     int curIndx = 0;
@@ -113,17 +119,24 @@ subPoset::subPoset(vector<pTree> initT, vector<pTree> Sample, set<string> compLe
         lastRank.at(curRank + 1) = -1;
     }
     
-    cout << "The rmax = " << rmax << "\n";
-
+    int nodesCount = (int)initT.size();
+    
     while(curRank < rmax){
-
+        cout << "Entering the cycle for potential node " << nodesCount << "\n"<< std::flush;
         pTree U = Poset.at(curIndx).Tree;
         vector<pTree> AllV = coverTrees(U, compLeafSet);
 
         auto rd = std::random_device {};
         auto rng = std::default_random_engine { rd() };
         shuffle(begin(AllV), std::end(AllV), rng);
-
+        
+        // Precompute rho(U, Z) for all sample trees once
+        cout<< "Computing rho for U\n"<< std::flush;
+        vector<double> rhoU(Sample.size());
+        for (int i = 0; i < Sample.size(); i++){
+            rhoU[i] = rho(U, Sample[i]);
+        }
+        
         //Version where maximal value is found.
 
         int IndexMaxS = -1;
@@ -133,10 +146,12 @@ subPoset::subPoset(vector<pTree> initT, vector<pTree> Sample, set<string> compLe
         float MaxValueL = 0;
         //float MaxValue  = 0;
         int indx = 0;
+        cout << "About to search through candidates for V \n"<< std::flush;
         for (pTree V : AllV){
             double tempSum = 0;
-            for (pTree Z : Sample){
-                if ((rho(V, Z) - rho(U, Z)) > 0){
+            for (int i = 0; i < Sample.size(); i++){
+                // rho(U, Z) is already cached; only rho(V, Z) is computed fresh
+                if ((rho(V, Sample[i]) - rhoU[i]) > 0){
                     tempSum++;
                 }
             }
@@ -164,6 +179,8 @@ subPoset::subPoset(vector<pTree> initT, vector<pTree> Sample, set<string> compLe
         pTree V = AllV.at(IndexMax);
 
         Poset.push_back(spNode(V));
+        cout << "Subposet node " << nodesCount << " added \n"<< std::flush;
+        nodesCount++;
 
         if (V.rank == rmax){
             Msize++;
@@ -205,7 +222,7 @@ subPoset::subPoset(vector<pTree> initT, vector<pTree> Sample, set<string> compLe
     }
 
     //Constructing below
-
+    cout << "We are constructing subposet below initial trees \n"<< std::flush;
     curRank = initRank;
     curIndx = firstRank.at(curRank);
 
@@ -213,6 +230,7 @@ subPoset::subPoset(vector<pTree> initT, vector<pTree> Sample, set<string> compLe
         firstRank.at(curRank - 1) = -1;
         lastRank.at(curRank - 1) = -1;
     }
+    int Counter2 = 0;
     while (curRank > 1) {
         pTree V = Poset.at(curIndx).Tree;
 
@@ -223,240 +241,80 @@ subPoset::subPoset(vector<pTree> initT, vector<pTree> Sample, set<string> compLe
         } else {
             toAdd = 2 - static_cast<int> (Poset.at(curIndx).under.size());
         }
+        
+        cout << "We are adding extra " << toAdd << " nodes \n"<< std::flush;
+        if (toAdd > 0){
+            // Precompute rho(V, T) for all sample trees once per node
+            cout << "Precomputing rhos for V \n"<< std::flush;
+            vector<double> rhoV(Sample.size());
+            for (int i = 0; i < Sample.size(); i++){
+                rhoV[i] = rho(V, Sample[i]);
+            }
 
-        if (toAdd == 1){
-            float min1 = 1.2;
-            bool addU1 = false;
-            pTree U1;
+            // Unified candidate scoring: collect (stb, U) pairs for all candidates
+            // then pick the 1 or 2 with lowest stb not already in under.
+            float min1 = 1.2, min2 = 1.2;
+            bool addU1 = false, addU2 = false;
+            pTree U1, U2;
 
-            for (string a : V.leafSet){
-                pTree U = V.Remove(a);
+            auto considerCandidate = [&](pTree U){
+                if (U.rank < V.rank - 1) return;
 
-                if (U.rank < V.rank - 1){
-                    continue;
-                }
-
-                bool continueOuter = false;
                 for (int k1 : Poset.at(curIndx).under){
-                    if (U == Poset.at(k1).Tree){
-                        continueOuter = true;
-                        break;
-                    }
-                }
-                if (continueOuter){
-                    continue;
+                    if (U == Poset.at(k1).Tree) return;
                 }
 
                 float Sum = 0;
-
-                for (pTree T : Sample){
-                    if ((rho(V, T) > rho(U, T)) > 0){
+                for (int i = 0; i < Sample.size(); i++){
+                    // rho(V, T) is cached; only rho(U, T) is computed fresh
+                    if (rhoV[i] > rho(U, Sample[i])){
                         Sum++;
                     }
                 }
-                float stb = Sum/B;
+                float stb = Sum / B;
+
                 if (stb < min1){
-                    min1 = stb;
-                    U1 = U;
-                    addU1 = true;
+                    min2 = min1; U2 = U1; if (addU1) addU2 = true;
+                    min1 = stb;  U1 = U;  addU1 = true;
+                } else if (stb < min2){
+                    min2 = stb; U2 = U; addU2 = true;
                 }
-            }
+            };
+            
+            cout << "Evaluating candidates to add below V \n"<< std::flush;
+            for (string a : V.leafSet)    considerCandidate(V.Remove(a));
+            for (Split s : V.intSplits)   considerCandidate(V.Remove(s));
 
-            for (Split s : V.intSplits){
-                pTree U = V.Remove(s);
-
-                if (U.rank < V.rank - 1){
-                    continue;
-                }
-
-                bool continueOuter = false;
-                for (int k1 : Poset.at(curIndx).under){
-                    if (U == Poset.at(k1).Tree){
-                        continueOuter = true;
-                        break;
-                    }
-                }
-                if (continueOuter){
-                    continue;
-                }
-
-                float Sum = 0;
-
-                for (pTree T : Sample){
-                    if ((rho(V, T) > rho(U, T)) > 0){
-                        Sum++;
-                    }
-                }
-                float stb = Sum/B;
-                if (stb < min1){
-                    min1 = stb;
-                    U1 = U;
-                    addU1 = true;
-                }
-            }
-
-            if(addU1){
-                Poset.push_back(spNode(U1));
+            // Helper lambda to insert a new node at curRank-1
+            auto insertNode = [&](pTree Unew){
+                Poset.push_back(spNode(Unew));
+                cout << "Subposet node " << nodesCount << " added \n"<< std::flush;
+                nodesCount++;
 
                 int runIndx = firstRank.at(curRank);
-
                 while (runIndx > -1){
-                    if (Poset.at(runIndx).Tree.covers(U1)){
+                    if (Poset.at(runIndx).Tree.covers(Unew)){
                         Poset.back().addParent(runIndx);
-                        Poset.at(runIndx).addChild(static_cast<int> (Poset.size()) - 1);
+                        Poset.at(runIndx).addChild(static_cast<int>(Poset.size()) - 1);
                     }
                     runIndx = Poset.at(runIndx).next;
                 }
 
                 if (firstRank.at(curRank-1) == -1){
-                    firstRank.at(curRank-1) = static_cast<int> (Poset.size()) - 1;
+                    firstRank.at(curRank-1) = static_cast<int>(Poset.size()) - 1;
                 }
-
-                if (lastRank.at(curRank - 1) > -1){
-                    Poset.at(lastRank.at(curRank-1)).next = static_cast<int> (Poset.size()) - 1;
+                if (lastRank.at(curRank-1) > -1){
+                    Poset.at(lastRank.at(curRank-1)).next = static_cast<int>(Poset.size()) - 1;
                 }
+                lastRank.at(curRank-1) = static_cast<int>(Poset.size()) - 1;
+            };
 
-                lastRank.at(curRank-1) = static_cast<int> (Poset.size()) - 1;
-            }
-
-        } else if (toAdd == 2){
-            float min1 = 1.2;
-            float min2 = 1.2;
-
-            bool addU1 = false;
-            bool addU2 = false;
-
-            pTree U1;
-            pTree U2;
-
-            for (string a : V.leafSet){
-                pTree U = V.Remove(a);
-
-                if (U.rank < V.rank - 1){
-                    continue;
-                }
-
-                bool continueOuter = false;
-                for (int k1 : Poset.at(curIndx).under){
-                    if (U == Poset.at(k1).Tree){
-                        continueOuter = true;
-                        break;
-                    }
-                }
-                if (continueOuter){
-                    continue;
-                }
-
-
-                float Sum = 0;
-
-                for (pTree T : Sample){
-                    if ((rho(V, T) > rho(U, T)) > 0){
-                        Sum++;
-                    }
-                }
-                float stb = Sum/B;
-
-                if (stb < min1){
-                    min2 = min1;
-                    U2 = U1;
-                    min1 = stb;
-                    U1 = U;
-                    if (addU1){
-                        addU2 = true;
-                    }
-                    addU1 = true;
-                } else if (stb < min2){
-                    min2 = stb;
-                    U2 = U;
-                    addU2 = true;
-                }
-            }
-
-            for (Split s : V.intSplits){
-                pTree U = V.Remove(s);
-
-                if (U.rank < V.rank - 1){
-                    continue;
-                }
-
-                bool continueOuter = false;
-                for (int k1 : Poset.at(curIndx).under){
-                    if (U == Poset.at(k1).Tree){
-                        continueOuter = true;
-                        break;
-                    }
-                }
-                if (continueOuter){
-                    continue;
-                }
-
-                float Sum = 0;
-
-                for (pTree T : Sample){
-                    if ((rho(V, T) > rho(U, T)) > 0){
-                        Sum++;
-                    }
-                }
-                float stb = Sum/B;
-                if (stb < min1){
-                    min2 = min1;
-                    U2 = U1;
-                    min1 = stb;
-                    U1 = U;
-                    if (addU1){
-                        addU2 = true;
-                    }
-                    addU1 = true;
-                } else if (stb < min2){
-                    min2 = stb;
-                    U2 = U;
-                    addU2 = true;
-                }
-            }
-
-            if (addU1){
-                Poset.push_back(spNode(U1));
-
-                int runIndx = firstRank.at(curRank);
-
-                while (runIndx > -1){
-                    if (Poset.at(runIndx).Tree.covers(U1)){
-                        Poset.back().addParent(runIndx);
-                        Poset.at(runIndx).addChild(static_cast<int> (Poset.size()) - 1);
-                    }
-                    runIndx = Poset.at(runIndx).next;
-                }
-
-                if (firstRank.at(curRank-1) == -1){
-                    firstRank.at(curRank-1) = static_cast<int> (Poset.size()) - 1;
-                }
-
-                if (lastRank.at(curRank - 1) > -1){
-                    Poset.at(lastRank.at(curRank-1)).next = static_cast<int> (Poset.size()) - 1;
-                }
-
-                lastRank.at(curRank-1) = static_cast<int> (Poset.size()) - 1;
-            }
-
-            if (addU2){
-                Poset.push_back(spNode(U2));
-
-                int runIndx = firstRank.at(curRank);
-
-                while (runIndx > -1){
-                    if (Poset.at(runIndx).Tree.covers(U2)){
-                        Poset.back().addParent(runIndx);
-                        Poset.at(runIndx).addChild(static_cast<int> (Poset.size()) - 1);
-                    }
-                    runIndx = Poset.at(runIndx).next;
-                }
-
-                Poset.at(lastRank.at(curRank-1)).next = static_cast<int> (Poset.size()) - 1;
-                lastRank.at(curRank-1) = static_cast<int> (Poset.size()) - 1;
-            }
-
+            if (addU1) insertNode(U1);
+            if (toAdd == 2 && addU2) insertNode(U2);
         }
+        
+        Counter2++;
+        cout << "End of cycle below number " << Counter2 << "\n"<< std::flush;
 
         curIndx = Poset.at(curIndx).next;
 
@@ -466,12 +324,10 @@ subPoset::subPoset(vector<pTree> initT, vector<pTree> Sample, set<string> compLe
         }
     }
     
-    cout << "The Msize = " << Msize << "\n";
     //Assigning kappa to upper trees.
+    cout << "Assigning kappas \n"<< std::flush;
     curIndx = firstRank.at(rmax);
     while(curIndx > -1){
-        cout << "For curIndx = " << curIndx << "\n";
-        cout << "And because of this, we have " << static_cast<int>(Poset.at(curIndx).under.size()) << "\n\n";
         Poset.at(curIndx).setKappa(Msize*(static_cast<int>(Poset.at(curIndx).under.size())));
         curIndx = Poset.at(curIndx).next;
     }
@@ -485,9 +341,6 @@ subPoset::subPoset(vector<pTree> initT, vector<pTree> Sample, set<string> compLe
                     kap = Poset.at(k).kappa;
                 }
             }
-            cout << "For curIndx = " << curIndx << "\n";
-            cout << "Second the kappa is " << kap << "\n";
-            cout << "Second under size " << static_cast<int>(Poset.at(curIndx).under.size()) << "\n\n";
             Poset.at(curIndx).setKappa(kap*(static_cast<int>(Poset.at(curIndx).under.size())));
             curIndx = Poset.at(curIndx).next;
         }
@@ -502,8 +355,6 @@ subPoset::subPoset(vector<pTree> initT, vector<pTree> Sample, set<string> compLe
                 kap = Poset.at(k).kappa;
             }
         }
-        cout << "For curIndx = " << curIndx << "\n";
-        cout << "Fourth the kappa is " << kap << "\n\n";
         Poset.at(curIndx).setKappa(kap);
         curIndx = Poset.at(curIndx).next;
     }
@@ -513,8 +364,10 @@ subPoset::subPoset(vector<pTree> initT, vector<pTree> Sample, vector<int> nSampl
     int rmax = 2*static_cast<int> (compLeafSet.size()) - 7;
     firstRank = std::vector<int>(rmax+1, -1);
     lastRank = std::vector<int>(rmax+1, -1);
-
+    
     Poset.push_back(spNode(initT.at(0)));
+    cout << "Subposet node " << 0 << " added \n"<< std::flush;
+    
     firstRank.at(initT.at(0).rank) = 0;
     lastRank.at(initT.at(0).rank) = 0;
 
@@ -531,9 +384,11 @@ subPoset::subPoset(vector<pTree> initT, vector<pTree> Sample, vector<int> nSampl
         Poset.at(lastRank.at(initRank)).setNext(i);
         lastRank.at(initRank) = i;
         Poset.push_back(spNode(initT.at(i)));
+        cout << "Subposet node " << i  << " added \n"<< std::flush;
     }
 
     //Creating things above the initial trees.
+    cout << "Creating things above initial trees in SubPoset \n"<< std::flush;
 
     int curRank = initRank;
     int B = std::accumulate(nSample.begin(), nSample.end(), 0);
@@ -545,17 +400,23 @@ subPoset::subPoset(vector<pTree> initT, vector<pTree> Sample, vector<int> nSampl
         lastRank.at(curRank + 1) = -1;
     }
     
-     cout << "The rmax = " << rmax << "\n";
-
+    int nodesCount = (int)initT.size();
     while(curRank < rmax){
-
+        cout << "Entering the cycle for potential node " << nodesCount << "\n"<< std::flush;
         pTree U = Poset.at(curIndx).Tree;
         vector<pTree> AllV = coverTrees(U, compLeafSet);
 
         auto rd = std::random_device {};
         auto rng = std::default_random_engine { rd() };
         shuffle(begin(AllV), std::end(AllV), rng);
-
+        
+        // Precompute rho(U, Z) for all sample trees once
+        cout<< "Computing rho for U\n"<< std::flush;
+        vector<double> rhoU(Sample.size());
+        for (int i = 0; i < Sample.size(); i++){
+            rhoU[i] = rho(U, Sample[i]);
+        }
+        
         //Version where maximal value is found.
 
         int IndexMaxS = -1;
@@ -565,14 +426,14 @@ subPoset::subPoset(vector<pTree> initT, vector<pTree> Sample, vector<int> nSampl
         float MaxValueL = 0;
         //float MaxValue  = 0;
         int indx = 0;
+        cout << "About to search through candidates for V \n"<< std::flush;
         for (pTree V : AllV){
             double tempSum = 0;
-            int currentIndx = 0;
-            for (pTree Z : Sample){
-                if ((rho(V, Z) - rho(U, Z)) > 0){
-                    tempSum += nSample.at(currentIndx);
+            for (int i = 0; i < Sample.size(); i++){
+                // rho(U, Z) is already cached; only rho(V, Z) is computed fresh
+                if ((rho(V, Sample[i]) - rhoU[i]) > 0){
+                    tempSum += nSample[i];
                 }
-                currentIndx++;
             }
             if ((V.leafSet.size() > U.leafSet.size()) && (V.leafSet.size()>4)){
                 if ((tempSum/B) > MaxValueL){
@@ -598,6 +459,8 @@ subPoset::subPoset(vector<pTree> initT, vector<pTree> Sample, vector<int> nSampl
         pTree V = AllV.at(IndexMax);
 
         Poset.push_back(spNode(V));
+        cout << "Subposet node " << nodesCount << " added \n"<< std::flush;
+        nodesCount++;
 
         if (V.rank == rmax){
             Msize++;
@@ -639,7 +502,7 @@ subPoset::subPoset(vector<pTree> initT, vector<pTree> Sample, vector<int> nSampl
     }
 
     //Constructing below
-
+    cout << "We are constructing subposet below initial trees \n"<< std::flush;
     curRank = initRank;
     curIndx = firstRank.at(curRank);
 
@@ -648,6 +511,7 @@ subPoset::subPoset(vector<pTree> initT, vector<pTree> Sample, vector<int> nSampl
         lastRank.at(curRank - 1) = -1;
 
     }
+    int Counter2 = 0;
     while (curRank > 1) {
         pTree V = Poset.at(curIndx).Tree;
 
@@ -658,247 +522,80 @@ subPoset::subPoset(vector<pTree> initT, vector<pTree> Sample, vector<int> nSampl
         } else {
             toAdd = 2 - static_cast<int> (Poset.at(curIndx).under.size());
         }
+        
+        cout << "We are adding extra " << toAdd << " nodes \n"<< std::flush;
+        if (toAdd > 0){
+            // Precompute rho(V, T) for all sample trees once per node
+            cout << "Precomputing rhos for V \n"<< std::flush;
+            vector<double> rhoV(Sample.size());
+            for (int i = 0; i < Sample.size(); i++){
+                rhoV[i] = rho(V, Sample[i]);
+            }
+            
+            float min1 = 1.2, min2 = 1.2;
+            bool addU1 = false, addU2 = false;
+            pTree U1, U2;
+            
+            auto considerCandidate = [&](pTree U){
+                if (U.rank < V.rank - 1) return;
 
-        if (toAdd == 1){
-            float min1 = 1.2;
-            bool addU1 = false;
-            pTree U1;
-
-            for (string a : V.leafSet){
-                pTree U = V.Remove(a);
-
-                if (U.rank < V.rank - 1){
-                    continue;
-                }
-
-                bool continueOuter = false;
                 for (int k1 : Poset.at(curIndx).under){
-                    if (U == Poset.at(k1).Tree){
-                        continueOuter = true;
-                        break;
-                    }
-                }
-                if (continueOuter){
-                    continue;
+                    if (U == Poset.at(k1).Tree) return;
                 }
 
                 float Sum = 0;
-                int currentIndx = 0;
-                for (pTree T : Sample){
-                    if ((rho(V, T) > rho(U, T)) > 0){
-                        Sum += nSample.at(currentIndx);
+                for (int i = 0; i < Sample.size(); i++){
+                    // rho(V, T) is cached; only rho(U, T) is computed fresh
+                    if (rhoV[i] > rho(U, Sample[i])){
+                        Sum += nSample[i];
                     }
-                    currentIndx++;
                 }
-                float stb = Sum/B;
+                float stb = Sum / B;
+
                 if (stb < min1){
-                    min1 = stb;
-                    U1 = U;
-                    addU1 = true;
+                    min2 = min1; U2 = U1; if (addU1) addU2 = true;
+                    min1 = stb;  U1 = U;  addU1 = true;
+                } else if (stb < min2){
+                    min2 = stb; U2 = U; addU2 = true;
                 }
-            }
-
-            for (Split s : V.intSplits){
-                pTree U = V.Remove(s);
-
-                if (U.rank < V.rank - 1){
-                    continue;
-                }
-
-                bool continueOuter = false;
-                for (int k1 : Poset.at(curIndx).under){
-                    if (U == Poset.at(k1).Tree){
-                        continueOuter = true;
-                        break;
-                    }
-                }
-                if (continueOuter){
-                    continue;
-                }
-
-                float Sum = 0;
-                int currentIndx = 0;
-                
-                for (pTree T : Sample){
-                    if ((rho(V, T) > rho(U, T)) > 0){
-                        Sum += nSample.at(currentIndx);
-                    }
-                    currentIndx++;
-                }
-                float stb = Sum/B;
-                if (stb < min1){
-                    min1 = stb;
-                    U1 = U;
-                    addU1 = true;
-                }
-            }
-
-            if(addU1){
-                Poset.push_back(spNode(U1));
+            };
+            
+            cout << "Evaluating candidates to add below V \n"<< std::flush;
+            for (string a : V.leafSet)    considerCandidate(V.Remove(a));
+            for (Split s : V.intSplits)   considerCandidate(V.Remove(s));
+            
+            // Helper lambda to insert a new node at curRank-1
+            auto insertNode = [&](pTree Unew){
+                Poset.push_back(spNode(Unew));
+                cout << "Subposet node " << nodesCount << " added \n"<< std::flush;
+                nodesCount++;
 
                 int runIndx = firstRank.at(curRank);
-
                 while (runIndx > -1){
-                    if (Poset.at(runIndx).Tree.covers(U1)){
+                    if (Poset.at(runIndx).Tree.covers(Unew)){
                         Poset.back().addParent(runIndx);
-                        Poset.at(runIndx).addChild(static_cast<int> (Poset.size()) - 1);
+                        Poset.at(runIndx).addChild(static_cast<int>(Poset.size()) - 1);
                     }
                     runIndx = Poset.at(runIndx).next;
                 }
 
                 if (firstRank.at(curRank-1) == -1){
-                    firstRank.at(curRank-1) = static_cast<int> (Poset.size()) - 1;
+                    firstRank.at(curRank-1) = static_cast<int>(Poset.size()) - 1;
                 }
-
-                if (lastRank.at(curRank - 1) > -1){
-                    Poset.at(lastRank.at(curRank-1)).next = static_cast<int> (Poset.size()) - 1;
+                if (lastRank.at(curRank-1) > -1){
+                    Poset.at(lastRank.at(curRank-1)).next = static_cast<int>(Poset.size()) - 1;
                 }
+                lastRank.at(curRank-1) = static_cast<int>(Poset.size()) - 1;
+            };
 
-                lastRank.at(curRank-1) = static_cast<int> (Poset.size()) - 1;
-            }
-
-        } else if (toAdd == 2){
-            float min1 = 1.2;
-            float min2 = 1.2;
-
-            bool addU1 = false;
-            bool addU2 = false;
-
-            pTree U1;
-            pTree U2;
-
-            for (string a : V.leafSet){
-                pTree U = V.Remove(a);
-
-                if (U.rank < V.rank - 1){
-                    continue;
-                }
-
-                bool continueOuter = false;
-                for (int k1 : Poset.at(curIndx).under){
-                    if (U == Poset.at(k1).Tree){
-                        continueOuter = true;
-                        break;
-                    }
-                }
-                if (continueOuter){
-                    continue;
-                }
-
-
-                float Sum = 0;
-                int currentIndx = 0;
-                for (pTree T : Sample){
-                    if ((rho(V, T) > rho(U, T)) > 0){
-                        Sum += nSample.at(currentIndx);
-                    }
-                    currentIndx++;
-                }
-                float stb = Sum/B;
-
-                if (stb < min1){
-                    min2 = min1;
-                    U2 = U1;
-                    min1 = stb;
-                    U1 = U;
-                    if (addU1){
-                        addU2 = true;
-                    }
-                    addU1 = true;
-                } else if (stb < min2){
-                    min2 = stb;
-                    U2 = U;
-                    addU2 = true;
-                }
-            }
-
-            for (Split s : V.intSplits){
-                pTree U = V.Remove(s);
-
-                if (U.rank < V.rank - 1){
-                    continue;
-                }
-
-                bool continueOuter = false;
-                for (int k1 : Poset.at(curIndx).under){
-                    if (U == Poset.at(k1).Tree){
-                        continueOuter = true;
-                        break;
-                    }
-                }
-                if (continueOuter){
-                    continue;
-                }
-
-                float Sum = 0;
-                int currentIndx = 0;
-                
-                for (pTree T : Sample){
-                    if ((rho(V, T) > rho(U, T)) > 0){
-                        Sum += nSample.at(currentIndx);
-                    }
-                    currentIndx++;
-                }
-                float stb = Sum/B;
-                if (stb < min1){
-                    min2 = min1;
-                    U2 = U1;
-                    min1 = stb;
-                    U1 = U;
-                    if (addU1){
-                        addU2 = true;
-                    }
-                    addU1 = true;
-                } else if (stb < min2){
-                    min2 = stb;
-                    U2 = U;
-                    addU2 = true;
-                }
-            }
-
-            if (addU1){
-                Poset.push_back(spNode(U1));
-
-                int runIndx = firstRank.at(curRank);
-
-                while (runIndx > -1){
-                    if (Poset.at(runIndx).Tree.covers(U1)){
-                        Poset.back().addParent(runIndx);
-                        Poset.at(runIndx).addChild(static_cast<int> (Poset.size()) - 1);
-                    }
-                    runIndx = Poset.at(runIndx).next;
-                }
-
-                if (firstRank.at(curRank-1) == -1){
-                    firstRank.at(curRank-1) = static_cast<int> (Poset.size()) - 1;
-                }
-
-                if (lastRank.at(curRank - 1) > -1){
-                    Poset.at(lastRank.at(curRank-1)).next = static_cast<int> (Poset.size()) - 1;
-                }
-
-                lastRank.at(curRank-1) = static_cast<int> (Poset.size()) - 1;
-            }
-
-            if (addU2){
-                Poset.push_back(spNode(U2));
-
-                int runIndx = firstRank.at(curRank);
-
-                while (runIndx > -1){
-                    if (Poset.at(runIndx).Tree.covers(U2)){
-                        Poset.back().addParent(runIndx);
-                        Poset.at(runIndx).addChild(static_cast<int> (Poset.size()) - 1);
-                    }
-                    runIndx = Poset.at(runIndx).next;
-                }
-
-                Poset.at(lastRank.at(curRank-1)).next = static_cast<int> (Poset.size()) - 1;
-                lastRank.at(curRank-1) = static_cast<int> (Poset.size()) - 1;
-            }
+            if (addU1) insertNode(U1);
+            if (toAdd == 2 && addU2) insertNode(U2);
 
         }
-
+        
+        Counter2++;
+        cout << "End of cycle below number " << Counter2 << "\n"<< std::flush;
+        
         curIndx = Poset.at(curIndx).next;
 
         if (curIndx == -1){
@@ -907,12 +604,10 @@ subPoset::subPoset(vector<pTree> initT, vector<pTree> Sample, vector<int> nSampl
         }
     }
     
-    cout << "The Msize = " << Msize << "\n";
     //Assigning kappa to upper trees.
+    cout << "Assigning kappas \n"<< std::flush;
     curIndx = firstRank.at(rmax);
     while(curIndx > -1){
-        cout << "For curIndx = " << curIndx << "\n";
-        cout << "And because of this, we have " << static_cast<int>(Poset.at(curIndx).under.size()) << "\n\n";
         Poset.at(curIndx).setKappa(Msize*(static_cast<int>(Poset.at(curIndx).under.size())));
         curIndx = Poset.at(curIndx).next;
     }
@@ -926,9 +621,6 @@ subPoset::subPoset(vector<pTree> initT, vector<pTree> Sample, vector<int> nSampl
                     kap = Poset.at(k).kappa;
                 }
             }
-            cout << "For curIndx = " << curIndx << "\n";
-            cout << "Second the kappa is " << kap << "\n";
-            cout << "Second under size " << static_cast<int>(Poset.at(curIndx).under.size()) << "\n\n";
             Poset.at(curIndx).setKappa(kap*(static_cast<int>(Poset.at(curIndx).under.size())));
             curIndx = Poset.at(curIndx).next;
         }
@@ -943,24 +635,18 @@ subPoset::subPoset(vector<pTree> initT, vector<pTree> Sample, vector<int> nSampl
                 kap = Poset.at(k).kappa;
             }
         }
-        cout << "For curIndx = " << curIndx << "\n";
-        cout << "Fourth the kappa is " << kap << "\n\n";
         Poset.at(curIndx).setKappa(kap);
         curIndx = Poset.at(curIndx).next;
     }
 }
 
 subPoset::subPoset(vector<pTree> Sample, set<string> compLeafSet, int Mt, int rb) {
-    
-    cout << "It entered the correct builder \n";
 
     int B      = static_cast<int>(Sample.size());
     int maxRnk = 2 * static_cast<int>(compLeafSet.size()) - 7;
 
     firstRank.assign(2 * static_cast<int>(compLeafSet.size()) - 6, -1);
     lastRank.assign(2 * static_cast<int>(compLeafSet.size()) - 6, -1);
-    
-    cout<< "Reached 1 \n" ;
 
     // ---------------------------------------------------------------
     // Shared helpers
@@ -999,8 +685,7 @@ subPoset::subPoset(vector<pTree> Sample, set<string> compLeafSet, int Mt, int rb
         mPhylo mp = mPhylo(T);
         return mp.toNewick();
     };
-
-    cout<< "Reached 2 \n"; 
+ 
     // ---------------------------------------------------------------
     // PHASE 1: Beam search upward with beam width Mt
     // ---------------------------------------------------------------
@@ -1010,12 +695,13 @@ subPoset::subPoset(vector<pTree> Sample, set<string> compLeafSet, int Mt, int rb
     // --- Seed: find best Mt trees directly above the empty tree ---
     {
         pTree emptyTree  = pTree("();");
-        vector<float> rhoEmpty = buildRhoVec(emptyTree);
+        vector<float> rhoEmpty(B,0.0f);
         vector<pTree> above    = coverTrees(emptyTree, compLeafSet);
 
         vector<Candidate> candidates;
         candidates.reserve(above.size());
-
+        
+        cout << "Computing rhos for the first level in the poset \n"<< std::flush;
         for (const pTree& V : above) {
             vector<float> rv = buildRhoVec(V);
             float sc = computeScore(rhoEmpty, rv);
@@ -1031,27 +717,26 @@ subPoset::subPoset(vector<pTree> Sample, set<string> compLeafSet, int Mt, int rb
             currentLevel.push_back({candidates[i].tree, candidates[i].rhoVec});
     }
 
-    cout<< "Reached 3 \n" ;
-    int counterTemp = 0;
     // --- Beam search: ascend rank by rank until maxRnk ---
+    cout << "We start searching upwards for best trees at max rank \n"<< std::flush;
+    int counter1 = 0;
     while ((int)currentLevel[0].tree.rank < maxRnk) {
-        
-        counterTemp++;
-        cout << "Cycle number" << counterTemp << "\n";
-
+        counter1++;
+        cout << "Going up for a " << counter1 << "time \n"<< std::flush; 
         set<string>    seenNewick;
         vector<BeamEntry> futureLevel;
         futureLevel.reserve(Mt);
         
         vector<vector<Candidate>> aboveCurrents;
         
-        cout << "Before step A \n";
         // Step A: from each beam entry, compute aboves and order by scores
+        int counterEntry = 0;
         for (const BeamEntry& entry : currentLevel) {
             vector<pTree> above = coverTrees(entry.tree, compLeafSet);
             
             vector<Candidate> aboveOne;
-            
+            cout << "Computing rhos for above trees of entry "<< counterEntry << " \n"<< std::flush;
+            counterEntry++;
             for (const pTree& V : above) {
                 vector<float> rv = buildRhoVec(V);
                 float sc = computeScore(entry.rhoVec, rv);
@@ -1068,24 +753,15 @@ subPoset::subPoset(vector<pTree> Sample, set<string> compLeafSet, int Mt, int rb
             
         }
         
-        cout << "Before step B \n";
         // Step B: Fill up with aboves, avoiding repetitions. We have a running indexes for each
+        cout<< "Fillin the next level with best candidates \n"<< std::flush;
         vector<int> tryIndx;
-        cout << "Step B 1 \n";
         
         tryIndx.assign(Mt, 0);
-        cout << "Step B 2 \n";
         
         int currentIndex = 0;
-        
-        cout << "BTW the size of currentLevel is " << (int)currentLevel.size() << "\n";
-        
-        int counterA = 0;
+
         while(((int)futureLevel.size() < Mt) && (accumulate(tryIndx.begin(), tryIndx.end(), 0) > -(int)currentLevel.size())){
-            counterA++;
-            cout << "Inside loop " << counterA << "\n";
-            cout << "currentIndex = " << currentIndex << "\n";
-            cout << "trying index = " << tryIndx.at(currentIndex) << "\n";
             
             if ((tryIndx.at(currentIndex) == -1) || (tryIndx.at(currentIndex) >= aboveCurrents[currentIndex].size())){
                 tryIndx.at(currentIndex) = -1;
@@ -1093,19 +769,12 @@ subPoset::subPoset(vector<pTree> Sample, set<string> compLeafSet, int Mt, int rb
             }
             Candidate canU = aboveCurrents[currentIndex][tryIndx.at(currentIndex)];
             
-            cout << "Step B.1 \n";
             string nwk = toNwk(canU.tree);
-            cout << "Step B.2 \n";
             if (!seenNewick.count(nwk)){
-                cout << "Step B.3 \n";
                 futureLevel.push_back({canU.tree, canU.rhoVec});
-                cout << "Step B.4 \n";
                 seenNewick.insert(nwk);
-                cout << "Step B.5 \n";
             }
-            cout << "Step B.6 \n";
             tryIndx.at(currentIndex)++;
-            cout << "Step B.7 \n";
             currentIndex = (currentIndex + 1) % ((int)currentLevel.size());
         }
         /*
@@ -1153,7 +822,6 @@ subPoset::subPoset(vector<pTree> Sample, set<string> compLeafSet, int Mt, int rb
             }
         } */
         
-        cout << "Before potential problem \n";
         currentLevel = std::move(futureLevel);
     }
 
@@ -1175,12 +843,13 @@ subPoset::subPoset(vector<pTree> Sample, set<string> compLeafSet, int Mt, int rb
     //          seeding rhoCache directly from Phase 1 results
     // ---------------------------------------------------------------
 
-    cout<< "Reached 4 \n" ;
     vector<vector<float>> rhoCache;
     rhoCache.reserve(Mt);
-
+    int nodesCount = 0;
     for (int m = 0; m < (int)currentLevel.size(); m++) {
         Poset.push_back(spNode(currentLevel[m].tree));
+        cout << "Subposet node " << nodesCount << " added \n"<< std::flush;
+        nodesCount++;
         rhoCache.push_back(currentLevel[m].rhoVec);   // no recomputation
 
         if (m < (int)currentLevel.size() - 1)
@@ -1194,7 +863,6 @@ subPoset::subPoset(vector<pTree> Sample, set<string> compLeafSet, int Mt, int rb
     firstRank[maxRnk] = 0;
     lastRank[maxRnk] = (int)currentLevel.size() - 1;
     
-    cout<< "Reached 5 \n" ;
 
     // ---------------------------------------------------------------
     // PHASE 3: Build downward iteratively, rank by rank
@@ -1221,6 +889,8 @@ subPoset::subPoset(vector<pTree> Sample, set<string> compLeafSet, int Mt, int rb
             childIdx = existIdx;
         } else {
             Poset.push_back(spNode(U));
+            cout << "Subposet node " << nodesCount << " added \n"<< std::flush;
+            nodesCount++;
             childIdx = (int)Poset.size() - 1;
             rhoCache.push_back(rhoU);
 
@@ -1246,7 +916,6 @@ subPoset::subPoset(vector<pTree> Sample, set<string> compLeafSet, int Mt, int rb
             runIndx = Poset[runIndx].next;
         }
     };
-    cout<< "Reached 6 \n" ;
     int curRank = maxRnk;
     int curIndx = firstRank[curRank];
 
@@ -1254,7 +923,6 @@ subPoset::subPoset(vector<pTree> Sample, set<string> compLeafSet, int Mt, int rb
         firstRank[curRank - 1] = -1;
         lastRank[curRank - 1] = -1;
     }
-    cout<< "Reached 7 \n" ;
     while (curRank > 1) {
 
         pTree          V    = Poset[curIndx].Tree;
@@ -1280,7 +948,8 @@ subPoset::subPoset(vector<pTree> Sample, set<string> compLeafSet, int Mt, int rb
                         sum++;
                 candidates.push_back({U, ru, sum / B});
             };
-
+            
+            cout << "Evaluating candidates below \n"<< std::flush;
             for (string a : V.leafSet)   evalFeature(V.Remove(a));
             for (Split  s : V.intSplits) evalFeature(V.Remove(s));
 
@@ -1320,8 +989,8 @@ subPoset::subPoset(vector<pTree> Sample, set<string> compLeafSet, int Mt, int rb
             curIndx = firstRank[curRank];
         }
     }
-    cout<< "Reached 8 \n" ;
     // Kappa pass for rank 1
+    cout << "Assigning kappa values \n"<< std::flush;
     if (curRank == 1 && firstRank[1] > -1) {
         int scanIndx = firstRank[1];
         while (scanIndx > -1) {
@@ -1339,8 +1008,6 @@ subPoset::subPoset(vector<pTree> Sample, set<string> compLeafSet, int Mt, int rb
 subPoset::subPoset(vector<pTree> Sample, vector<int> nSample,
                    set<string> compLeafSet, int Mt, int rb) {
     
-    cout << "It entered the correct builder \n";
-
     int N      = static_cast<int>(Sample.size());
     int B      = accumulate(nSample.begin(), nSample.end(), 0);
     int maxRnk = 2 * static_cast<int>(compLeafSet.size()) - 7;
@@ -1348,8 +1015,6 @@ subPoset::subPoset(vector<pTree> Sample, vector<int> nSample,
     firstRank.assign(2 * static_cast<int>(compLeafSet.size()) - 6, -1);
     lastRank.assign(2 * static_cast<int>(compLeafSet.size()) - 6, -1);
     
-    cout<< "Reached 1 \n" ;
-
     // ---------------------------------------------------------------
     // Shared helpers
     // ---------------------------------------------------------------
@@ -1388,7 +1053,6 @@ subPoset::subPoset(vector<pTree> Sample, vector<int> nSample,
         return mp.toNewick();
     };
 
-    cout<< "Reached 2 \n"; 
     // ---------------------------------------------------------------
     // PHASE 1: Beam search upward with beam width Mt
     // ---------------------------------------------------------------
@@ -1403,7 +1067,8 @@ subPoset::subPoset(vector<pTree> Sample, vector<int> nSample,
 
         vector<Candidate> candidates;
         candidates.reserve(above.size());
-
+        
+        cout << "Computing rhos for the first level in the poset \n"<< std::flush;
         for (const pTree& V : above) {
             vector<float> rv = buildRhoVec(V);
             float sc = computeScore(rhoEmpty, rv);
@@ -1419,27 +1084,27 @@ subPoset::subPoset(vector<pTree> Sample, vector<int> nSample,
             currentLevel.push_back({candidates[i].tree, candidates[i].rhoVec});
     }
 
-    cout<< "Reached 3 \n" ;
-    int counterTemp = 0;
     // --- Beam search: ascend rank by rank until maxRnk ---
+    cout << "We start searching upwards for best trees at max rank \n"<< std::flush;
+    int counter1 = 0;
     while ((int)currentLevel[0].tree.rank < maxRnk) {
-        
-        counterTemp++;
-        cout << "Cycle number" << counterTemp << "\n";
-
+        counter1++;
+        cout << "Going up for a " << counter1 << "time \n"<< std::flush; 
         set<string>    seenNewick;
         vector<BeamEntry> futureLevel;
         futureLevel.reserve(Mt);
         
         vector<vector<Candidate>> aboveCurrents;
         
-        cout << "Before step A \n";
         // Step A: from each beam entry, compute aboves and order by scores
+        int counterEntry = 0;
         for (const BeamEntry& entry : currentLevel) {
             vector<pTree> above = coverTrees(entry.tree, compLeafSet);
             
             vector<Candidate> aboveOne;
             
+            cout << "Computing rhos for above trees of entry "<< counterEntry << " \n"<< std::flush;
+            counterEntry++;
             for (const pTree& V : above) {
                 vector<float> rv = buildRhoVec(V);
                 float sc = computeScore(entry.rhoVec, rv);
@@ -1456,24 +1121,15 @@ subPoset::subPoset(vector<pTree> Sample, vector<int> nSample,
             
         }
         
-        cout << "Before step B \n";
         // Step B: Fill up with aboves, avoiding repetitions. We have a running indexes for each
+        cout<< "Fillin the next level with best candidates \n"<< std::flush;
         vector<int> tryIndx;
-        cout << "Step B 1 \n";
         
         tryIndx.assign(Mt, 0);
-        cout << "Step B 2 \n";
         
         int currentIndex = 0;
         
-        cout << "BTW the size of currentLevel is " << (int)currentLevel.size() << "\n";
-        
-        int counterA = 0;
         while(((int)futureLevel.size() < Mt) && (accumulate(tryIndx.begin(), tryIndx.end(), 0) > -(int)currentLevel.size())){
-            counterA++;
-            cout << "Inside loop " << counterA << "\n";
-            cout << "currentIndex = " << currentIndex << "\n";
-            cout << "trying index = " << tryIndx.at(currentIndex) << "\n";
             
             if ((tryIndx.at(currentIndex) == -1) || (tryIndx.at(currentIndex) >= aboveCurrents[currentIndex].size())){
                 tryIndx.at(currentIndex) = -1;
@@ -1481,19 +1137,12 @@ subPoset::subPoset(vector<pTree> Sample, vector<int> nSample,
             }
             Candidate canU = aboveCurrents[currentIndex][tryIndx.at(currentIndex)];
             
-            cout << "Step B.1 \n";
             string nwk = toNwk(canU.tree);
-            cout << "Step B.2 \n";
             if (!seenNewick.count(nwk)){
-                cout << "Step B.3 \n";
                 futureLevel.push_back({canU.tree, canU.rhoVec});
-                cout << "Step B.4 \n";
                 seenNewick.insert(nwk);
-                cout << "Step B.5 \n";
             }
-            cout << "Step B.6 \n";
             tryIndx.at(currentIndex)++;
-            cout << "Step B.7 \n";
             currentIndex = (currentIndex + 1) % ((int)currentLevel.size());
         }
         /*
@@ -1541,7 +1190,6 @@ subPoset::subPoset(vector<pTree> Sample, vector<int> nSample,
             }
         } */
         
-        cout << "Before potential problem \n";
         currentLevel = std::move(futureLevel);
     }
 
@@ -1563,12 +1211,14 @@ subPoset::subPoset(vector<pTree> Sample, vector<int> nSample,
     //          seeding rhoCache directly from Phase 1 results
     // ---------------------------------------------------------------
 
-    cout<< "Reached 4 \n" ;
     vector<vector<float>> rhoCache;
     rhoCache.reserve(Mt);
-
+    
+    int nodesCount = 0;
     for (int m = 0; m < (int)currentLevel.size(); m++) {
         Poset.push_back(spNode(currentLevel[m].tree));
+        cout << "Subposet node " << nodesCount << " added \n"<< std::flush;
+        nodesCount++;
         rhoCache.push_back(currentLevel[m].rhoVec);   // no recomputation
 
         if (m < (int)currentLevel.size() - 1)
@@ -1581,8 +1231,6 @@ subPoset::subPoset(vector<pTree> Sample, vector<int> nSample,
 
     firstRank[maxRnk] = 0;
     lastRank[maxRnk] = (int)currentLevel.size() - 1;
-    
-    cout<< "Reached 5 \n" ;
 
     // ---------------------------------------------------------------
     // PHASE 3: Build downward iteratively, rank by rank
@@ -1609,6 +1257,8 @@ subPoset::subPoset(vector<pTree> Sample, vector<int> nSample,
             childIdx = existIdx;
         } else {
             Poset.push_back(spNode(U));
+            cout << "Subposet node " << nodesCount << " added \n"<< std::flush;
+            nodesCount++;
             childIdx = (int)Poset.size() - 1;
             rhoCache.push_back(rhoU);
 
@@ -1634,7 +1284,6 @@ subPoset::subPoset(vector<pTree> Sample, vector<int> nSample,
             runIndx = Poset[runIndx].next;
         }
     };
-    cout<< "Reached 6 \n" ;
     int curRank = maxRnk;
     int curIndx = firstRank[curRank];
 
@@ -1642,7 +1291,6 @@ subPoset::subPoset(vector<pTree> Sample, vector<int> nSample,
         firstRank[curRank - 1] = -1;
         lastRank[curRank - 1] = -1;
     }
-    cout<< "Reached 7 \n" ;
     while (curRank > 1) {
 
         pTree          V    = Poset[curIndx].Tree;
@@ -1668,7 +1316,8 @@ subPoset::subPoset(vector<pTree> Sample, vector<int> nSample,
                         sum += nSample[i];
                 candidates.push_back({U, ru, sum / B});
             };
-
+            
+            cout << "Evaluating candidates below \n"<< std::flush;
             for (string a : V.leafSet)   evalFeature(V.Remove(a));
             for (Split  s : V.intSplits) evalFeature(V.Remove(s));
 
@@ -1708,8 +1357,8 @@ subPoset::subPoset(vector<pTree> Sample, vector<int> nSample,
             curIndx = firstRank[curRank];
         }
     }
-    cout<< "Reached 8 \n" ;
     // Kappa pass for rank 1
+    cout << "Assigning kappa values \n"<< std::flush;
     if (curRank == 1 && firstRank[1] > -1) {
         int scanIndx = firstRank[1];
         while (scanIndx > -1) {
@@ -1723,17 +1372,18 @@ subPoset::subPoset(vector<pTree> Sample, vector<int> nSample,
     }
 }
 
+
 void subPoset::print(){
     for (int j = 1; j < firstRank.size(); j++){
         int curIndx = firstRank.at(j);
         while (curIndx > -1){
-            cout << "\n For node " << to_string(curIndx) << "\n";
+            cout << "\n For node " << to_string(curIndx) << "\n"<< std::flush;
             Poset.at(curIndx).print();
             curIndx = Poset.at(curIndx).next;
         }
     }
 
-    cout<<"Additional information: \n";
+    cout<<"Additional information: \n"<< std::flush;
     cout<<"    First in ranks: ";
     for (int j : firstRank){
         cout<< to_string(j) << " ";
@@ -1743,20 +1393,20 @@ void subPoset::print(){
     for (int j : lastRank){
         cout<< to_string(j) << " ";
     }
-    cout << "\n";
+    cout << "\n"<< std::flush;
 }
 
 void subPoset::printRd(){
     for (int j = 1; j < firstRank.size(); j++){
         int curIndx = firstRank.at(j);
         while (curIndx > -1){
-            cout << "\n For node " << to_string(curIndx) << "\n";
+            cout << "\n For node " << to_string(curIndx) << "\n"<< std::flush;
             Poset.at(curIndx).printRd();
             curIndx = Poset.at(curIndx).next;
         }
     }
 
-    cout<<"Additional information: \n";
+    cout<<"Additional information: \n"<< std::flush;
     cout<<"    First in ranks: ";
     for (int j : firstRank){
         cout<< to_string(j) << " ";
@@ -1766,6 +1416,6 @@ void subPoset::printRd(){
     for (int j : lastRank){
         cout<< to_string(j) << " ";
     }
-    cout << "\n";
+    cout << "\n"<< std::flush;
 }
 

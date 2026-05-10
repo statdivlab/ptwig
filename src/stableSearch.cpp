@@ -287,12 +287,10 @@ vector<pTree> stableSearch(vector<pTree> treeSample, set<string> compLeafSet, fl
     set<string> visited;
 
     // --- Fix 1: cache rho(U, Z) — recomputed only when U changes ---
-    vector<float> rhoU(B);
-    for (int i = 0; i < B; i++)
-        rhoU[i] = rho(U, treeSample[i]);
+    vector<float> rhoU(B,0.0f);
     
     while (true) {
-        
+        cout << "Entering cycle " << Count << "\n"<< std::flush;
         vector<pTree> AllV = coverTrees(U, compLeafSet);
         
         auto rd  = std::random_device{};
@@ -347,7 +345,7 @@ vector<pTree> stableSearch(vector<pTree> treeSample, set<string> compLeafSet, fl
             bestRhoV  = bestRhoVS;
         }
 
-        
+        cout << "Best candidate found \n"<< std::flush;
         pTree V = AllV.at(IndexMax);
 
         if (RecentlyRemoved && MaxValue < alpha)
@@ -404,13 +402,14 @@ vector<pTree> stableSearch(vector<pTree> treeSample, set<string> compLeafSet, fl
         if (MinimumStability(treeSample, bestRhoV, V, B) < alpha)
             break;
         
+        cout << "The candidate was finally selected \n"<< std::flush;
         U = V;
         
         // --- Fix 3: cycle detection ---
         mPhylo mpU = mPhylo(U);
         string newickU = mpU.toNewick();
         if (visited.count(newickU)) {
-            cout << "WARNING: Cycle detected, stopping.\n";
+            cout << "WARNING: Cycle detected, stopping.\n"<< std::flush;
             break;
         }
         visited.insert(newickU);
@@ -434,7 +433,7 @@ vector<pTree> stableSearch(vector<pTree> treeSample, set<string> compLeafSet, fl
         }
         
         if (Count > 4*compLeafSet.size()-7){
-            cout<< "WARNING!: Forced to stop. \n";
+            cout<< "WARNING!: Forced to stop. \n"<< std::flush;
             break;
         }
         
@@ -459,12 +458,10 @@ vector<pTree> stableSearch(vector<pTree> treeSample, vector<int> nSample, set<st
     set<string> visited;
 
     // --- Fix 1: cache rho(U, Z) — recomputed only when U changes ---
-    vector<float> rhoU(N);
-    for (int i = 0; i < N; i++)
-        rhoU[i] = rho(U, treeSample[i]);
+    vector<float> rhoU(N,0.0f);
     
     while (true) {
-        
+        cout << "Entering cycle " << Count << "\n"<< std::flush;
         vector<pTree> AllV = coverTrees(U, compLeafSet);
         
         auto rd  = std::random_device{};
@@ -519,7 +516,7 @@ vector<pTree> stableSearch(vector<pTree> treeSample, vector<int> nSample, set<st
             bestRhoV  = bestRhoVS;
         }
 
-        
+        cout << "Best candidate was found \n"<< std::flush;
         pTree V = AllV.at(IndexMax);
 
         if (RecentlyRemoved && MaxValue < alpha)
@@ -576,13 +573,14 @@ vector<pTree> stableSearch(vector<pTree> treeSample, vector<int> nSample, set<st
         if (MinimumStability(treeSample, nSample, bestRhoV, V, B) < alpha)
             break;
         
+        cout << "The candidate was finally selected \n"<< std::flush;
         U = V;
         
         // --- Fix 3: cycle detection ---
         mPhylo mpU = mPhylo(U);
         string newickU = mpU.toNewick();
         if (visited.count(newickU)) {
-            cout << "WARNING: Cycle detected, stopping.\n";
+            cout << "WARNING: Cycle detected, stopping.\n"<< std::flush;
             break;
         }
         visited.insert(newickU);
@@ -606,7 +604,7 @@ vector<pTree> stableSearch(vector<pTree> treeSample, vector<int> nSample, set<st
         }
         
         if (Count > 4*compLeafSet.size()-7){
-            cout<< "WARNING!: Forced to stop. \n";
+            cout<< "WARNING!: Forced to stop. \n"<< std::flush;
             break;
         }
         

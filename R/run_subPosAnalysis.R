@@ -23,7 +23,7 @@
 run_subPostAnalysis <- function(tstar_newick = NULL, newicks1 = NULL, newicks2 = NULL, bnewicks = NULL,
                                   tstar_file = NULL, file1 = NULL, file2 = NULL, bfile = NULL,
                                   SPbuilder = "stability",
-                                  alpha = 0.85, q = 0.1, tau = 0.95,
+                                  alpha = 0.85, q = 0.1, tau = 0.80,
                                   Mt = 1, rb = NULL, delta = NULL, 
                                   summarized = FALSE) {
   
@@ -129,6 +129,7 @@ run_subPostAnalysis <- function(tstar_newick = NULL, newicks1 = NULL, newicks2 =
   ## --- Normalize: unroot and remove edge lengths ---------------------------
   tree_star1 <- ape::unroot(tree_star1)
   tree_star1$edge.length <- NULL
+  tree_star1$node.label <- NULL
   cleaned_treeStar <- ape::write.tree(phy = tree_star1)
   
   trees1 <- lapply(trees1, function(tr) {
@@ -139,6 +140,7 @@ run_subPostAnalysis <- function(tstar_newick = NULL, newicks1 = NULL, newicks2 =
     
     # Remove branch lengths (set to NULL so ape::write.tree does not print them)
     tr$edge.length <- NULL
+    tr$node.label <- NULL
     tr
   })
   
@@ -150,6 +152,7 @@ run_subPostAnalysis <- function(tstar_newick = NULL, newicks1 = NULL, newicks2 =
     
     # Remove branch lengths (set to NULL so ape::write.tree does not print them)
     tr$edge.length <- NULL
+    tr$node.label <- NULL
     tr
   })
   
@@ -161,6 +164,7 @@ run_subPostAnalysis <- function(tstar_newick = NULL, newicks1 = NULL, newicks2 =
     
     # Remove branch lengths (set to NULL so ape::write.tree does not print them)
     tr$edge.length <- NULL
+    tr$node.label <- NULL
     tr
   })
   
