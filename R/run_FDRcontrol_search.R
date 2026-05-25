@@ -79,12 +79,13 @@ run_FDRcontrol_search <- function(newicks = NULL, newicks1 = NULL, newicks2 = NU
     }
   }
   
-  if ((SPbuilder != "stability") && (SPbuilder != "basic") && (SPbuilder != "basic_auto")){
+  if ((SPbuilder != "stability") && (SPbuilder != "basic") && (SPbuilder != "basic_auto") && (SPbuilder != "upwards")){
     stop(
       "The subPoset builder method must be a valid option. It is either:\n",
       "SPbuilder = 'stability': Building a stable tree first and branching out from there\n",
       "SPbuilder = 'basic': For basic bifurcation with known number of maximal trees and bifurcation rank level.",
-      "SPbuilder = 'basic_auto': For basic bifurcation with automatic selection of maximal trees and bifurcation rank level."
+      "SPbuilder = 'basic_auto': For basic bifurcation with automatic selection of maximal trees and bifurcation rank level.",
+      "SPbuilder = 'upwards': For upwards bifurcation based on relaxed thresholds."
     )
   }
   
@@ -241,6 +242,11 @@ run_FDRcontrol_search <- function(newicks = NULL, newicks1 = NULL, newicks2 = NU
                                        treeSample2R = cleaned_newicks2, nSample2R = Count_trees2,
                                        compLeafSetR = completeLeaveSet,
                                        MtR = Mt, rbR = rb, qR = q)
+    } else {
+      res <- completeSearchRcppS_V3(treeSample1R = cleaned_newicks1, nSample1R = Count_trees1,
+                                    treeSample2R = cleaned_newicks2, nSample2R = Count_trees2,
+                                    compLeafSetR = completeLeaveSet,
+                                    qR = q, qoR = 0.5)
     }
     
   } else {

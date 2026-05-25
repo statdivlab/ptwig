@@ -807,3 +807,127 @@ Rcpp::List SPAnalysisR2S(CharacterVector treeStar,
     
 }
 
+// [[Rcpp::export]]
+Rcpp::List simpleSPAnalysis(CharacterVector treeSample1R,
+                                 IntegerVector nSample1R,
+                                 CharacterVector compLeafSetR,
+                                 int MtR, int rbR, double qR, double deltaR) {
+    
+    std::vector<pTree> treeSample1;
+    treeSample1.reserve(treeSample1R.size());
+
+    for (int i = 0; i < treeSample1R.size(); i++) {
+        if (treeSample1R[i] == NA_STRING)
+            stop("treeSample cannot contain NA.");
+        treeSample1.emplace_back(
+            pTree(as<std::string>(treeSample1R[i]))
+        );
+    }
+    
+    std::vector<int> nSample1;
+    
+    for (int i = 0; i < nSample1R.size(); i++){
+        nSample1.push_back(static_cast<int>(nSample1R[i]));
+    }
+    
+    int B1 = std::accumulate(nSample1.begin(), nSample1.end(), 0);
+    
+    //
+    // 2. Convert compLeafSetR → set<string>
+    //
+    std::set<std::string> compLeafSet;
+    for (int i = 0; i < compLeafSetR.size(); i++) {
+        if (compLeafSetR[i] == NA_STRING)
+            stop("compLeafSet cannot contain NA.");
+        compLeafSet.insert(as<std::string>(compLeafSetR[i]));
+    }
+    
+    //
+    // 2.1 Converting the integers
+    //
+    
+    int Mt = static_cast<int>(MtR);
+    
+    int rb = static_cast<int>(rbR);
+    
+    float q = static_cast<float>(qR);
+    
+    float delta = static_cast<float>(deltaR);
+
+    //
+    // 3. Call C++ function
+    //
+    
+    subPoset subPost = subPoset(treeSample1, nSample1, compLeafSet, 0.5f);
+    
+    cout << "Computing 1 \n" << std::flush;
+    computeAllChainCounts(subPost);
+    cout << "Computing 2 \n" << std::flush;
+    computeAllMaxLevelBounds(subPost);
+    
+    cout << "Computing 3 \n" << std::flush;
+    
+    //------------------------------------------------//
+    
+    vector<string> subPosetTrees;
+    vector<int> subPosetRanks;
+    vector<int> subPosetKappas;
+    
+    for (int k = 0; k < subPost.Poset.size(); k++){
+        mPhylo rP = mPhylo(subPost.Poset.at(k).Tree);
+        subPosetTrees.push_back(rP.toNewick());
+        subPosetRanks.push_back(subPost.Poset.at(k).Tree.rank);
+        subPosetKappas.push_back(subPost.Poset.at(k).kappa);
+    }
+    
+    
+    // Convert edges: split pairs into two parallel integer vectors
+    std::vector<std::pair<int,int>> edges;
+    std::vector<int> antiChainEst;
+    std::vector<int64_t> antiChainUBound;
+    
+    { int r = 1;
+      int v = subPost.firstRank[r];
+      while (v != -1){
+          edges.push_back({0,(v+1)});
+          antiChainEst.push_back(subPost.Poset[v].boundAntichain[0]);
+          antiChainUBound.push_back(subPost.Poset[v].chainCountIe[0]);
+          v = subPost.Poset[v].next;
+      }
+      
+    }
+    
+    for (int r = 2; r < (int)subPost.firstRank.size(); ++r) {
+        int v = subPost.firstRank[r];
+        while (v != -1){
+            for (int i = 0; i < subPost.Poset[v].under.size(); ++i) {
+                int u = subPost.Poset[v].under[i];
+                edges.push_back({(u+1),(v+1)});
+                antiChainEst.push_back(subPost.Poset[v].boundAntichain[i]);
+                antiChainUBound.push_back(subPost.Poset[v].chainCountIe[i]);
+            }
+            v = subPost.Poset[v].next;
+        }
+    }
+    
+    int nEdges = edges.size();
+    
+    Rcpp::IntegerVector edgeFrom(nEdges), edgeTo(nEdges);
+    
+    for (int i = 0; i < nEdges; i++) {
+        edgeFrom[i] = edges[i].first;
+        edgeTo[i]   = edges[i].second;
+    }
+    
+    return Rcpp::List::create(
+        Rcpp::Named("subPosetTrees")       = Rcpp::wrap(subPosetTrees),
+        Rcpp::Named("subPosetRanks")       = Rcpp::wrap(subPosetRanks),
+        Rcpp::Named("subPosetKappas")       = Rcpp::wrap(subPosetKappas),
+        Rcpp::Named("subPosetNus_HighBound")     = Rcpp::wrap(antiChainUBound),
+        Rcpp::Named("subPosetNus_Est")       = Rcpp::wrap(antiChainEst),
+        Rcpp::Named("CoveringPairsLower")  = edgeFrom,
+        Rcpp::Named("CoveringPairsUpper")  = edgeTo
+    );
+    
+}
+

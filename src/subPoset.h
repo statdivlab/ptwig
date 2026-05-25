@@ -13,11 +13,13 @@ class spNode{
     public:
         pTree Tree;
         int kappa;
-        float lbEta;
+        float zeta;
     
         int next;
         std::vector<int> over;
         std::vector<int> under;
+        std::vector<int64_t> chainCountIe;
+        std::vector<int> boundAntichain;
         
     
     spNode(pTree eTree);
@@ -30,7 +32,7 @@ class spNode{
     
     void setKappa(int newKappa);
     
-    void setLBE (float newLBE);
+    void setZeta (float newZ);
     
     void print();
     
@@ -57,9 +59,18 @@ class subPoset{
     
     subPoset(std::vector<pTree> Sample, std::vector<int> nSample, std::set<std::string> compLeafSet, int Mt, int rb, bool Constructive);
     
+    subPoset(std::vector<pTree> Sample, std::vector<int> nSample, std::set<std::string> compLeafSet, float q);
+    
     void print();
     
     void printRd();
 };
+
+std::vector<bool> computeDesc(const subPoset& SP, int y);
+std::vector<bool> computeAnc(const subPoset& SP, int x);
+int64_t countMaximalChains(const subPoset& SP, const std::vector<bool>& desc);
+int maxLevelInIe(const subPoset& SP, const std::vector<bool>& desc, const std::vector<bool>& anc, const int& curRank);
+void computeAllChainCounts(subPoset& SP);
+void computeAllMaxLevelBounds(subPoset& SP);
     
 #endif

@@ -344,6 +344,10 @@ int rho(pTree T1, pTree T2) {
     return curMax - 4;
 }
 
+oRho::oRho(){
+    rho = 0;
+}
+
 oRho::oRho(int nrho, std::vector<std::set<std::string>> newPresLeaves){
     rho = nrho;
     presLeaves = newPresLeaves;

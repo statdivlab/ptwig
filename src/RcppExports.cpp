@@ -78,6 +78,23 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// completeSearchRcppS_V3
+CharacterVector completeSearchRcppS_V3(CharacterVector treeSample1R, IntegerVector nSample1R, CharacterVector treeSample2R, IntegerVector nSample2R, CharacterVector compLeafSetR, double qR, double qoR);
+RcppExport SEXP _ptwig_completeSearchRcppS_V3(SEXP treeSample1RSEXP, SEXP nSample1RSEXP, SEXP treeSample2RSEXP, SEXP nSample2RSEXP, SEXP compLeafSetRSEXP, SEXP qRSEXP, SEXP qoRSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< CharacterVector >::type treeSample1R(treeSample1RSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type nSample1R(nSample1RSEXP);
+    Rcpp::traits::input_parameter< CharacterVector >::type treeSample2R(treeSample2RSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type nSample2R(nSample2RSEXP);
+    Rcpp::traits::input_parameter< CharacterVector >::type compLeafSetR(compLeafSetRSEXP);
+    Rcpp::traits::input_parameter< double >::type qR(qRSEXP);
+    Rcpp::traits::input_parameter< double >::type qoR(qoRSEXP);
+    rcpp_result_gen = Rcpp::wrap(completeSearchRcppS_V3(treeSample1R, nSample1R, treeSample2R, nSample2R, compLeafSetR, qR, qoR));
+    return rcpp_result_gen;
+END_RCPP
+}
 // SPAnalysisR
 Rcpp::List SPAnalysisR(CharacterVector treeStar, CharacterVector treeSample1R, CharacterVector treeSample2R, CharacterVector bigTreeSampleR, CharacterVector compLeafSetR, double alphaR, double qR, double tauR, double deltaR);
 RcppExport SEXP _ptwig_SPAnalysisR(SEXP treeStarSEXP, SEXP treeSample1RSEXP, SEXP treeSample2RSEXP, SEXP bigTreeSampleRSEXP, SEXP compLeafSetRSEXP, SEXP alphaRSEXP, SEXP qRSEXP, SEXP tauRSEXP, SEXP deltaRSEXP) {
@@ -157,6 +174,23 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type qR(qRSEXP);
     Rcpp::traits::input_parameter< double >::type deltaR(deltaRSEXP);
     rcpp_result_gen = Rcpp::wrap(SPAnalysisR2S(treeStar, treeSample1R, nSample1R, treeSample2R, nSample2R, bigTreeSampleR, nBSampleR, compLeafSetR, MtR, rbR, qR, deltaR));
+    return rcpp_result_gen;
+END_RCPP
+}
+// simpleSPAnalysis
+Rcpp::List simpleSPAnalysis(CharacterVector treeSample1R, IntegerVector nSample1R, CharacterVector compLeafSetR, int MtR, int rbR, double qR, double deltaR);
+RcppExport SEXP _ptwig_simpleSPAnalysis(SEXP treeSample1RSEXP, SEXP nSample1RSEXP, SEXP compLeafSetRSEXP, SEXP MtRSEXP, SEXP rbRSEXP, SEXP qRSEXP, SEXP deltaRSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< CharacterVector >::type treeSample1R(treeSample1RSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type nSample1R(nSample1RSEXP);
+    Rcpp::traits::input_parameter< CharacterVector >::type compLeafSetR(compLeafSetRSEXP);
+    Rcpp::traits::input_parameter< int >::type MtR(MtRSEXP);
+    Rcpp::traits::input_parameter< int >::type rbR(rbRSEXP);
+    Rcpp::traits::input_parameter< double >::type qR(qRSEXP);
+    Rcpp::traits::input_parameter< double >::type deltaR(deltaRSEXP);
+    rcpp_result_gen = Rcpp::wrap(simpleSPAnalysis(treeSample1R, nSample1R, compLeafSetR, MtR, rbR, qR, deltaR));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -317,10 +351,12 @@ static const R_CallMethodDef CallEntries[] = {
     {"_ptwig_completeSearchRcpp_V2", (DL_FUNC) &_ptwig_completeSearchRcpp_V2, 6},
     {"_ptwig_completeSearchRcppS", (DL_FUNC) &_ptwig_completeSearchRcppS, 8},
     {"_ptwig_completeSearchRcppS_V2", (DL_FUNC) &_ptwig_completeSearchRcppS_V2, 8},
+    {"_ptwig_completeSearchRcppS_V3", (DL_FUNC) &_ptwig_completeSearchRcppS_V3, 7},
     {"_ptwig_SPAnalysisR", (DL_FUNC) &_ptwig_SPAnalysisR, 9},
     {"_ptwig_SPAnalysisR2", (DL_FUNC) &_ptwig_SPAnalysisR2, 9},
     {"_ptwig_SPAnalysisRS", (DL_FUNC) &_ptwig_SPAnalysisRS, 12},
     {"_ptwig_SPAnalysisR2S", (DL_FUNC) &_ptwig_SPAnalysisR2S, 12},
+    {"_ptwig_simpleSPAnalysis", (DL_FUNC) &_ptwig_simpleSPAnalysis, 7},
     {"_ptwig_VerifyingRho", (DL_FUNC) &_ptwig_VerifyingRho, 2},
     {"_ptwig_computeFD", (DL_FUNC) &_ptwig_computeFD, 2},
     {"_ptwig_computeFDP", (DL_FUNC) &_ptwig_computeFDP, 2},

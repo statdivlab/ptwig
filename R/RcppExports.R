@@ -17,6 +17,10 @@ completeSearchRcppS_V2 <- function(treeSample1R, nSample1R, treeSample2R, nSampl
     .Call(`_ptwig_completeSearchRcppS_V2`, treeSample1R, nSample1R, treeSample2R, nSample2R, compLeafSetR, MtR, rbR, qR)
 }
 
+completeSearchRcppS_V3 <- function(treeSample1R, nSample1R, treeSample2R, nSample2R, compLeafSetR, qR, qoR) {
+    .Call(`_ptwig_completeSearchRcppS_V3`, treeSample1R, nSample1R, treeSample2R, nSample2R, compLeafSetR, qR, qoR)
+}
+
 SPAnalysisR <- function(treeStar, treeSample1R, treeSample2R, bigTreeSampleR, compLeafSetR, alphaR, qR, tauR, deltaR) {
     .Call(`_ptwig_SPAnalysisR`, treeStar, treeSample1R, treeSample2R, bigTreeSampleR, compLeafSetR, alphaR, qR, tauR, deltaR)
 }
@@ -31,6 +35,10 @@ SPAnalysisRS <- function(treeStar, treeSample1R, nSample1R, treeSample2R, nSampl
 
 SPAnalysisR2S <- function(treeStar, treeSample1R, nSample1R, treeSample2R, nSample2R, bigTreeSampleR, nBSampleR, compLeafSetR, MtR, rbR, qR, deltaR) {
     .Call(`_ptwig_SPAnalysisR2S`, treeStar, treeSample1R, nSample1R, treeSample2R, nSample2R, bigTreeSampleR, nBSampleR, compLeafSetR, MtR, rbR, qR, deltaR)
+}
+
+simpleSPAnalysis <- function(treeSample1R, nSample1R, compLeafSetR, MtR, rbR, qR, deltaR) {
+    .Call(`_ptwig_simpleSPAnalysis`, treeSample1R, nSample1R, compLeafSetR, MtR, rbR, qR, deltaR)
 }
 
 VerifyingRho <- function(treeR, compLeafSetR) {

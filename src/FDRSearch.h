@@ -11,4 +11,10 @@ std::vector<pTree> FDRSearch(std::vector<pTree> treeSample, std::vector<int> nSa
 
 pTree FDRSearchGreedy(std::vector<pTree> treeSample, std::vector<int> nSample, subPoset SP, std::vector<float> lbEta, float q);
 
+pTree FDRSearchGreedy(std::vector<pTree> treeSample, std::vector<int> nSample, std::vector<std::vector<oRho>> storedORho, subPoset SP, std::vector<float> lbEta, float q);
+    
+pTree FDRSearchGreedy(std::vector<pTree> treeSample, std::vector<std::vector<oRho>> storedORho, subPoset SP, std::vector<float> lbEta, float q);
+
+pTree FDRSearchGreedy(std::vector<pTree> treeSample, std::vector<int> nSample, std::vector<std::vector<oRho>> storedORho, subPoset SP, float q);
+
 #endif

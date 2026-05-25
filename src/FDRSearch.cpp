@@ -44,6 +44,17 @@ float kapThreshold(float omegaT, float q, int N, int kappa){
     
 }
 
+float nuThreshold(float omegaT, float q, int N, int nu, float zeta){
+    float prelim = log(nu) + log(omegaT) - log(q);
+    //cout << "Prelim is " << prelim << "\n"<< std::flush; 
+    float thrs1 = std::max(prelim/(2*N), 0.0f);
+    
+    //cout << "Thrs1 " << thrs1 << "\n"<< std::flush; 
+    
+    return(sqrt(thrs1) + zeta);
+    
+}
+
 vector<pTree> FDRSearch(vector<pTree> treeSample, subPoset SP, float q){
     
     vector<int> FDRtrees;
@@ -799,8 +810,7 @@ vector<pTree> FDRSearch(vector<pTree> treeSample, vector<int> nSample, subPoset 
     return Results;
 }
 
-pTree FDRSearchGreedy(vector<pTree> treeSample, vector<int> nSample,
-                               subPoset SP, vector<float> lbEta, float q) {
+pTree FDRSearchGreedy(vector<pTree> treeSample, vector<int> nSample, subPoset SP, vector<float> lbEta, float q) {
 
     int B = std::accumulate(nSample.begin(), nSample.end(), 0);
     int rmax = static_cast<int>(SP.firstRank.size() - 1);
@@ -900,6 +910,326 @@ pTree FDRSearchGreedy(vector<pTree> treeSample, vector<int> nSample,
             cout << "  Transition " << current << " -> " << upIdx
                  << " score=" << s << " thresh=" << threshold(upIdx) << "\n" << std::flush;
             if (s >= threshold(upIdx)) {
+                next = upIdx;
+                cout << "  Moving up to " << upIdx << "\n" << std::flush;
+                break;
+            }
+        }
+
+        if (next == -1) {
+            cout << "No upward transition passes from node " << current
+                 << ". Stopping.\n" << std::flush;
+            break;  // stuck — report current as result
+        }
+
+        current = next;
+    }
+
+    cout << "Final node: " << current << "\n" << std::flush;
+    return { SP.Poset.at(current).Tree };
+}
+
+pTree FDRSearchGreedy(vector<pTree> treeSample, vector<int> nSample, vector<vector<oRho>> storedORho, subPoset SP, vector<float> lbEta, float q) {
+
+    int B = std::accumulate(nSample.begin(), nSample.end(), 0);
+    int rmax = static_cast<int>(SP.firstRank.size() - 1);
+    int numTrees = static_cast<int>(treeSample.size());
+    int numNodes = static_cast<int>(SP.Poset.size());
+
+    // Score for the bottom-level transition (rank-1 node standing alone):
+    // fraction of trees for which rho(node, T) > 0, shifted by lbEta
+    auto scoreBase = [&](int nodeIdx) -> float {
+        float sum = 0;
+        for (int t = 0; t < numTrees; ++t)
+            if (storedORho.at(nodeIdx).at(t).rho > 0)
+                sum += nSample.at(t);
+        return (sum / B) + lbEta[lbEta.size() - 1] - 1;
+    };
+
+    // Score for the transition from parentIdx -> childIdx (moving up):
+    // fraction of trees where rho increases, shifted by lbEta of the parent
+    auto scoreTransition = [&](int TaIdx, int TbIdx) -> float {
+        float sum = 0;
+        for (int t = 0; t < numTrees; ++t)
+            if ((storedORho.at(TbIdx).at(t).rho - storedORho.at(TaIdx).at(t).rho) > 0)
+                sum += nSample.at(t);
+        return (sum / B) + lbEta[TaIdx] - 1;
+    };
+
+    // Threshold for a given node
+    auto threshold = [&](int nodeIdx) -> float {
+        float omega = static_cast<float>(rmax - SP.Poset.at(nodeIdx).Tree.rank + 1)
+                    / static_cast<float>(rmax);
+        return kapThreshold(omega, q, B, SP.Poset.at(nodeIdx).kappa);
+    };
+
+    // ----------------------------------------------------------------
+    // Step 1: scan rank-1 nodes in random order, pick first that passes
+    // ----------------------------------------------------------------
+    int curIndx = SP.firstRank.at(1);
+
+    // Collect all rank-1 node indices
+    vector<int> rank1Nodes;
+    while (curIndx > -1) {
+        rank1Nodes.push_back(curIndx);
+        curIndx = SP.Poset.at(curIndx).next;
+    }
+
+    // Shuffle for random order
+    auto rd  = std::random_device{};
+    auto rng = std::default_random_engine{ rd() };
+    shuffle(rank1Nodes.begin(), rank1Nodes.end(), rng);
+
+    int current = -1;
+    for (int idx : rank1Nodes) {
+        float s = scoreBase(idx);
+        cout << "Rank-1 node " << idx << " score=" << s
+             << " thresh=" << threshold(idx) << "\n" << std::flush;
+        if (s >= threshold(idx)) {
+            current = idx;
+            cout << "Selected rank-1 node " << idx << "\n" << std::flush;
+            break;
+        }
+    }
+
+    if (current == -1) {
+        cout << "No rank-1 node passes threshold. Returning empty.\n" << std::flush;
+        return {pTree("();")};
+    }
+
+    // ----------------------------------------------------------------
+    // Step 2: greedily climb upward
+    // ----------------------------------------------------------------
+    while (!SP.Poset.at(current).over.empty()) {
+        const vector<int>& candidates = SP.Poset.at(current).over;
+
+        // Shuffle candidates for random order
+        vector<int> shuffled(candidates.begin(), candidates.end());
+        auto rd2  = std::random_device{};
+        auto rng2 = std::default_random_engine{ rd2() };
+        shuffle(shuffled.begin(), shuffled.end(),rng2);
+
+        int next = -1;
+        for (int upIdx : shuffled) {
+            float s = scoreTransition(current, upIdx);
+            cout << "  Transition " << current << " -> " << upIdx
+                 << " score=" << s << " thresh=" << threshold(upIdx) << "\n" << std::flush;
+            if (s >= threshold(upIdx)) {
+                next = upIdx;
+                cout << "  Moving up to " << upIdx << "\n" << std::flush;
+                break;
+            }
+        }
+
+        if (next == -1) {
+            cout << "No upward transition passes from node " << current
+                 << ". Stopping.\n" << std::flush;
+            break;  // stuck — report current as result
+        }
+
+        current = next;
+    }
+
+    cout << "Final node: " << current << "\n" << std::flush;
+    return { SP.Poset.at(current).Tree };
+}
+
+pTree FDRSearchGreedy(vector<pTree> treeSample, vector<vector<oRho>> storedORho, subPoset SP, vector<float> lbEta, float q) {
+
+    int rmax = static_cast<int>(SP.firstRank.size() - 1);
+    int numTrees = static_cast<int>(treeSample.size());
+    int numNodes = static_cast<int>(SP.Poset.size());
+
+    // Score for the bottom-level transition (rank-1 node standing alone):
+    // fraction of trees for which rho(node, T) > 0, shifted by lbEta
+    auto scoreBase = [&](int nodeIdx) -> float {
+        float sum = 0;
+        for (int t = 0; t < numTrees; ++t)
+            if (storedORho.at(nodeIdx).at(t).rho > 0)
+                sum++;
+        return (sum / numTrees) + lbEta[lbEta.size() - 1] - 1;
+    };
+
+    // Score for the transition from parentIdx -> childIdx (moving up):
+    // fraction of trees where rho increases, shifted by lbEta of the parent
+    auto scoreTransition = [&](int TaIdx, int TbIdx) -> float {
+        float sum = 0;
+        for (int t = 0; t < numTrees; ++t)
+            if ((storedORho.at(TbIdx).at(t).rho - storedORho.at(TaIdx).at(t).rho) > 0)
+                sum++;
+        return (sum / numTrees) + lbEta[TaIdx] - 1;
+    };
+
+    // Threshold for a given node
+    auto threshold = [&](int nodeIdx) -> float {
+        float omega = static_cast<float>(rmax - SP.Poset.at(nodeIdx).Tree.rank + 1)
+                    / static_cast<float>(rmax);
+        return kapThreshold(omega, q, numTrees, SP.Poset.at(nodeIdx).kappa);
+    };
+
+    // ----------------------------------------------------------------
+    // Step 1: scan rank-1 nodes in random order, pick first that passes
+    // ----------------------------------------------------------------
+    int curIndx = SP.firstRank.at(1);
+
+    // Collect all rank-1 node indices
+    vector<int> rank1Nodes;
+    while (curIndx > -1) {
+        rank1Nodes.push_back(curIndx);
+        curIndx = SP.Poset.at(curIndx).next;
+    }
+
+    // Shuffle for random order
+    auto rd  = std::random_device{};
+    auto rng = std::default_random_engine{ rd() };
+    shuffle(rank1Nodes.begin(), rank1Nodes.end(), rng);
+
+    int current = -1;
+    for (int idx : rank1Nodes) {
+        float s = scoreBase(idx);
+        cout << "Rank-1 node " << idx << " score=" << s
+             << " thresh=" << threshold(idx) << "\n" << std::flush;
+        if (s >= threshold(idx)) {
+            current = idx;
+            cout << "Selected rank-1 node " << idx << "\n" << std::flush;
+            break;
+        }
+    }
+
+    if (current == -1) {
+        cout << "No rank-1 node passes threshold. Returning empty.\n" << std::flush;
+        return {pTree("();")};
+    }
+
+    // ----------------------------------------------------------------
+    // Step 2: greedily climb upward
+    // ----------------------------------------------------------------
+    while (!SP.Poset.at(current).over.empty()) {
+        const vector<int>& candidates = SP.Poset.at(current).over;
+
+        // Shuffle candidates for random order
+        vector<int> shuffled(candidates.begin(), candidates.end());
+        auto rd2  = std::random_device{};
+        auto rng2 = std::default_random_engine{ rd2() };
+        shuffle(shuffled.begin(), shuffled.end(),rng2);
+
+        int next = -1;
+        for (int upIdx : shuffled) {
+            float s = scoreTransition(current, upIdx);
+            cout << "  Transition " << current << " -> " << upIdx
+                 << " score=" << s << " thresh=" << threshold(upIdx) << "\n" << std::flush;
+            if (s >= threshold(upIdx)) {
+                next = upIdx;
+                cout << "  Moving up to " << upIdx << "\n" << std::flush;
+                break;
+            }
+        }
+
+        if (next == -1) {
+            cout << "No upward transition passes from node " << current
+                 << ". Stopping.\n" << std::flush;
+            break;  // stuck — report current as result
+        }
+
+        current = next;
+    }
+
+    cout << "Final node: " << current << "\n" << std::flush;
+    return { SP.Poset.at(current).Tree };
+}
+
+pTree FDRSearchGreedy(vector<pTree> treeSample, vector<int> nSample, vector<vector<oRho>> storedORho, subPoset SP, float q){
+
+    int B = std::accumulate(nSample.begin(), nSample.end(), 0);
+    int rmax = static_cast<int>(SP.firstRank.size() - 1);
+    int numTrees = static_cast<int>(treeSample.size());
+    int numNodes = static_cast<int>(SP.Poset.size());
+
+    // Score for the bottom-level transition (rank-1 node standing alone):
+    // fraction of trees for which rho(node, T) > 0, shifted by lbEta
+    auto scoreBase = [&](int nodeIdx) -> float {
+        float sum = 0;
+        for (int t = 0; t < numTrees; ++t)
+            if (storedORho.at(nodeIdx).at(t).rho > 0)
+                sum += nSample.at(t);
+        return (sum / B);
+    };
+
+    // Score for the transition from parentIdx -> childIdx (moving up):
+    // fraction of trees where rho increases, shifted by lbEta of the parent
+    auto scoreTransition = [&](int TaIdx, int TbIdx) -> float {
+        float sum = 0;
+        for (int t = 0; t < numTrees; ++t)
+            if ((storedORho.at(TbIdx).at(t).rho - storedORho.at(TaIdx).at(t).rho) > 0)
+                sum += nSample.at(t);
+        return (sum / B);
+    };
+
+    // Threshold for a given node
+    auto threshold = [&](int nodeIdx, int childIdx) -> float {
+        float omega = static_cast<float>(rmax - SP.Poset.at(nodeIdx).Tree.rank + 1)
+                    / static_cast<float>(rmax);
+        float taZeta = 1.0f/(3.0f);
+        if (SP.Poset.at(nodeIdx).Tree.rank > 1){
+            taZeta = min(SP.Poset.at(SP.Poset.at(nodeIdx).under[childIdx]).zeta, 0.5f);
+        } 
+        
+        return kapThreshold(omega, q, B, SP.Poset.at(nodeIdx).boundAntichain[childIdx]);
+    };
+
+    // ----------------------------------------------------------------
+    // Step 1: scan rank-1 nodes in random order, pick first that passes
+    // ----------------------------------------------------------------
+    int curIndx = SP.firstRank.at(1);
+
+    // Collect all rank-1 node indices
+    vector<int> rank1Nodes;
+    while (curIndx > -1) {
+        rank1Nodes.push_back(curIndx);
+        curIndx = SP.Poset.at(curIndx).next;
+    }
+
+    // Shuffle for random order
+    auto rd  = std::random_device{};
+    auto rng = std::default_random_engine{ rd() };
+    shuffle(rank1Nodes.begin(), rank1Nodes.end(), rng);
+
+    int current = -1;
+    for (int idx : rank1Nodes) {
+        float s = scoreBase(idx);
+        cout << "Rank-1 node " << idx << " score=" << s
+             << " thresh=" << threshold(idx,0) << "\n" << std::flush;
+        if (s >= threshold(idx, 0)) {
+            current = idx;
+            cout << "Selected rank-1 node " << idx << "\n" << std::flush;
+            break;
+        }
+    }
+
+    if (current == -1) {
+        cout << "No rank-1 node passes threshold. Returning empty.\n" << std::flush;
+        return {pTree("();")};
+    }
+
+    // ----------------------------------------------------------------
+    // Step 2: greedily climb upward
+    // ----------------------------------------------------------------
+    while (!SP.Poset.at(current).over.empty()) {
+        const vector<int>& candidates = SP.Poset.at(current).over;
+
+        // Shuffle candidates for random order
+        vector<int> shuffled(candidates.begin(), candidates.end());
+        auto rd2  = std::random_device{};
+        auto rng2 = std::default_random_engine{ rd2() };
+        shuffle(shuffled.begin(), shuffled.end(),rng2);
+
+        int next = -1;
+        for (int upIdx : shuffled) {
+            float s = scoreTransition(current, upIdx);
+            int chldIdx = static_cast<int>(find(SP.Poset.at(upIdx).under.begin(), SP.Poset.at(upIdx).under.end(), current) - SP.Poset.at(upIdx).under.begin());
+            cout << "  Transition " << current << " -> " << upIdx
+                 << " score=" << s << " thresh=" << threshold(upIdx, chldIdx) << "\n" << std::flush;
+            if (s >= threshold(upIdx, chldIdx)) {
                 next = upIdx;
                 cout << "  Moving up to " << upIdx << "\n" << std::flush;
                 break;

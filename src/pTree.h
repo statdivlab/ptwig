@@ -88,8 +88,10 @@ class pTree{
     int returnComplexity();
 
     bool over(pTree tOther);
+    bool over(pTree tOther) const;
     
     bool covers(pTree tOther);
+    bool covers(pTree tOther) const;
     
 };
 

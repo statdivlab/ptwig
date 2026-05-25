@@ -465,7 +465,29 @@ bool pTree::over(pTree tOther){
     return false;
 }
 
+bool pTree::over(pTree tOther) const{
+    if (includes(leafSet.begin(),leafSet.end(),
+                 tOther.leafSet.begin(), tOther.leafSet.end())){
+        set<Split> MappedSplits;
+        for (Split spt : intSplits){
+            MappedSplits.insert(spt.TDR(tOther.leafSet));
+        }
+        if (includes(MappedSplits.begin(),MappedSplits.end(),
+                     tOther.intSplits.begin(),tOther.intSplits.end())){
+            return true;
+        }
+    }
+    return false;
+}
+
 bool pTree::covers(pTree tOther){
+    if(over(tOther) && (rank == tOther.rank + 1)){
+        return true;
+    }
+    return false;
+}
+
+bool pTree::covers(pTree tOther) const {
     if(over(tOther) && (rank == tOther.rank + 1)){
         return true;
     }

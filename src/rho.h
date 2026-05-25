@@ -10,9 +10,10 @@ class oRho{
         int rho;
         std::vector<std::set<std::string>> presLeaves;
     
+    oRho();
+    
     oRho(int nrho, std::vector<std::set<std::string>> newPresLeaves);
 };
-
 oRho rho(pTree U, pTree V, oRho baseORho, pTree Tl, std::string extral);
 
 oRho rho(pTree U, pTree V, oRho baseORho, pTree Tl, Split extraS);
