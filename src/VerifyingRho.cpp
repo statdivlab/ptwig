@@ -103,7 +103,7 @@ bool VerifyingRho(CharacterVector treeR, CharacterVector compLeafSetR) {
         curORho = nORho;
         // Save curTree so it remains unchanged after the loop
         pTree loopTree = curTree;
-        int curRho2 = curRho;
+        //int curRho2 = curRho;
         oRho curORho2 = curORho;
         int nRho2 = -1;
         oRho nORho2 = curORho;
@@ -189,7 +189,7 @@ bool VerifyingRho(CharacterVector treeR, CharacterVector compLeafSetR) {
             // Step down: the tree we just computed becomes the new starting point
             loopTree = curTree2;
             curORho2 = nORho2;
-            curRho2 = nRho2;
+            //curRho2 = nRho2;
         }
         
     }

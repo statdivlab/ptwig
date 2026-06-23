@@ -2,6 +2,7 @@
 #define MPHYLO_H
 
 #include "pTree.h"
+#include <unordered_map>
 #include <set>
 #include <queue>
 #include <vector>

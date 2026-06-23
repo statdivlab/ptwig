@@ -7,6 +7,7 @@
 #include "FDRSearch.h"
 #include "idNullCoveringPairsComputation.h"
 #include "subPosetAnalysis.h"
+#include <rcpptimer.h>
 #include <iostream>
 #include <set>
 #include <queue>
@@ -811,8 +812,11 @@ Rcpp::List SPAnalysisR2S(CharacterVector treeStar,
 Rcpp::List simpleSPAnalysis(CharacterVector treeSample1R,
                                  IntegerVector nSample1R,
                                  CharacterVector compLeafSetR,
-                                 int MtR, int rbR, double qR, double deltaR) {
+                                 int MtR, int rbR, double qR, double q0R,
+                                 int top_width1, int bottom_width1,
+                                 int top_width2, int bottom_width2) {
     
+    Rcpp::Timer timer("times_main");
     std::vector<pTree> treeSample1;
     treeSample1.reserve(treeSample1R.size());
 
@@ -830,7 +834,7 @@ Rcpp::List simpleSPAnalysis(CharacterVector treeSample1R,
         nSample1.push_back(static_cast<int>(nSample1R[i]));
     }
     
-    int B1 = std::accumulate(nSample1.begin(), nSample1.end(), 0);
+    
     
     //
     // 2. Convert compLeafSetR → set<string>
@@ -850,84 +854,254 @@ Rcpp::List simpleSPAnalysis(CharacterVector treeSample1R,
     
     int rb = static_cast<int>(rbR);
     
-    float q = static_cast<float>(qR);
+    //float q = static_cast<float>(qR);
     
-    float delta = static_cast<float>(deltaR);
+    float q0 = static_cast<float>(q0R);
 
     //
     // 3. Call C++ function
     //
     
-    subPoset subPost = subPoset(treeSample1, nSample1, compLeafSet, 0.5f);
+    timer.tic("UpwardsSubposet");
+    subPoset subPost_upwards = subPoset(treeSample1, nSample1, compLeafSet, q0);
+    timer.toc("UpwardsSubposet");
     
-    cout << "Computing 1 \n" << std::flush;
-    computeAllChainCounts(subPost);
-    cout << "Computing 2 \n" << std::flush;
-    computeAllMaxLevelBounds(subPost);
     
-    cout << "Computing 3 \n" << std::flush;
+    computeAllMaxLevelBounds(subPost_upwards);
     
     //------------------------------------------------//
     
-    vector<string> subPosetTrees;
-    vector<int> subPosetRanks;
-    vector<int> subPosetKappas;
+    vector<string> subPosetTrees_upwards;
+    vector<int> subPosetRanks_upwards;
     
-    for (int k = 0; k < subPost.Poset.size(); k++){
-        mPhylo rP = mPhylo(subPost.Poset.at(k).Tree);
-        subPosetTrees.push_back(rP.toNewick());
-        subPosetRanks.push_back(subPost.Poset.at(k).Tree.rank);
-        subPosetKappas.push_back(subPost.Poset.at(k).kappa);
+    for (int k = 0; k < subPost_upwards.Poset.size(); k++){
+        mPhylo rP = mPhylo(subPost_upwards.Poset.at(k).Tree);
+        subPosetTrees_upwards.push_back(rP.toNewick());
+        subPosetRanks_upwards.push_back(subPost_upwards.Poset.at(k).Tree.rank);
     }
     
     
     // Convert edges: split pairs into two parallel integer vectors
-    std::vector<std::pair<int,int>> edges;
-    std::vector<int> antiChainEst;
-    std::vector<int64_t> antiChainUBound;
+    std::vector<std::pair<int,int>> edges_upwards;
+    std::vector<int> antiChainEst_upwards;
     
     { int r = 1;
-      int v = subPost.firstRank[r];
+      int v = subPost_upwards.firstRank[r];
       while (v != -1){
-          edges.push_back({0,(v+1)});
-          antiChainEst.push_back(subPost.Poset[v].boundAntichain[0]);
-          antiChainUBound.push_back(subPost.Poset[v].chainCountIe[0]);
-          v = subPost.Poset[v].next;
+          edges_upwards.push_back({0,(v+1)});
+          antiChainEst_upwards.push_back(subPost_upwards.Poset[v].boundAntichain[0]);
+          v = subPost_upwards.Poset[v].next;
       }
       
     }
     
-    for (int r = 2; r < (int)subPost.firstRank.size(); ++r) {
-        int v = subPost.firstRank[r];
+    for (int r = 2; r < (int)subPost_upwards.firstRank.size(); ++r) {
+        int v = subPost_upwards.firstRank[r];
         while (v != -1){
-            for (int i = 0; i < subPost.Poset[v].under.size(); ++i) {
-                int u = subPost.Poset[v].under[i];
-                edges.push_back({(u+1),(v+1)});
-                antiChainEst.push_back(subPost.Poset[v].boundAntichain[i]);
-                antiChainUBound.push_back(subPost.Poset[v].chainCountIe[i]);
+            for (int i = 0; i < subPost_upwards.Poset[v].under.size(); ++i) {
+                int u = subPost_upwards.Poset[v].under[i];
+                edges_upwards.push_back({(u+1),(v+1)});
+                antiChainEst_upwards.push_back(subPost_upwards.Poset[v].boundAntichain[i]);
             }
-            v = subPost.Poset[v].next;
+            v = subPost_upwards.Poset[v].next;
         }
     }
     
-    int nEdges = edges.size();
+    int nEdges_upwards = edges_upwards.size();
     
-    Rcpp::IntegerVector edgeFrom(nEdges), edgeTo(nEdges);
+    Rcpp::IntegerVector edgeFrom_upwards(nEdges_upwards), edgeTo_upwards(nEdges_upwards);
     
-    for (int i = 0; i < nEdges; i++) {
-        edgeFrom[i] = edges[i].first;
-        edgeTo[i]   = edges[i].second;
+    for (int i = 0; i < nEdges_upwards; i++) {
+        edgeFrom_upwards[i] = edges_upwards[i].first;
+        edgeTo_upwards[i]   = edges_upwards[i].second;
     }
     
-    return Rcpp::List::create(
-        Rcpp::Named("subPosetTrees")       = Rcpp::wrap(subPosetTrees),
-        Rcpp::Named("subPosetRanks")       = Rcpp::wrap(subPosetRanks),
-        Rcpp::Named("subPosetKappas")       = Rcpp::wrap(subPosetKappas),
-        Rcpp::Named("subPosetNus_HighBound")     = Rcpp::wrap(antiChainUBound),
-        Rcpp::Named("subPosetNus_Est")       = Rcpp::wrap(antiChainEst),
-        Rcpp::Named("CoveringPairsLower")  = edgeFrom,
-        Rcpp::Named("CoveringPairsUpper")  = edgeTo
-    );
+    //
+    // 3. Call C++ function
+    //
     
+    timer.tic("BasicSubposet");
+    subPoset subPost_basic = subPoset(treeSample1, nSample1, compLeafSet, Mt, rb);
+    timer.toc("BasicSubposet");
+    
+    
+    computeAllMaxLevelBounds(subPost_basic);
+    
+    //------------------------------------------------//
+    
+    vector<string> subPosetTrees_basic;
+    vector<int> subPosetRanks_basic;
+    
+    for (int k = 0; k < subPost_basic.Poset.size(); k++){
+        mPhylo rP = mPhylo(subPost_basic.Poset.at(k).Tree);
+        subPosetTrees_basic.push_back(rP.toNewick());
+        subPosetRanks_basic.push_back(subPost_basic.Poset.at(k).Tree.rank);
+    }
+    
+    
+    // Convert edges: split pairs into two parallel integer vectors
+    std::vector<std::pair<int,int>> edges_basic;
+    std::vector<int> antiChainEst_basic;
+    
+    { int r = 1;
+      int v = subPost_basic.firstRank[r];
+      while (v != -1){
+          edges_basic.push_back({0,(v+1)});
+          antiChainEst_basic.push_back(subPost_basic.Poset[v].boundAntichain[0]);
+          v = subPost_basic.Poset[v].next;
+      }
+      
+    }
+    
+    for (int r = 2; r < (int)subPost_basic.firstRank.size(); ++r) {
+        int v = subPost_basic.firstRank[r];
+        while (v != -1){
+            for (int i = 0; i < subPost_basic.Poset[v].under.size(); ++i) {
+                int u = subPost_basic.Poset[v].under[i];
+                edges_basic.push_back({(u+1),(v+1)});
+                antiChainEst_basic.push_back(subPost_basic.Poset[v].boundAntichain[i]);
+            }
+            v = subPost_basic.Poset[v].next;
+        }
+    }
+    
+    int nEdges_basic = edges_basic.size();
+
+    Rcpp::IntegerVector edgeFrom_basic(nEdges_basic), edgeTo_basic(nEdges_basic);
+
+    for (int i = 0; i < nEdges_basic; i++) {
+        edgeFrom_basic[i] = edges_basic[i].first;
+        edgeTo_basic[i]   = edges_basic[i].second;
+    }
+
+    // ------------------------------------------------------------------
+    // New fixed-width constructor, upwards orientation (top_width1, bottom_width1)
+    // ------------------------------------------------------------------
+    // This builder uses the same implicit-empty-bottom convention as the
+    // upwards/basic builders (the empty tree is node 0, not stored in Poset),
+    // so trees/edges are extracted exactly like the _U / _B blocks: rank-1
+    // nodes connect to bottom 0, real nodes are labelled 1..n.
+    timer.tic("FixedWidthUpSubposet");
+    subPoset subPost_fwUp = subPoset(treeSample1, nSample1, compLeafSet,
+                                     top_width1, bottom_width1,
+                                     std::string("upwards"));
+    timer.toc("FixedWidthUpSubposet");
+
+    computeAllMaxLevelBounds(subPost_fwUp);
+
+    vector<string> subPosetTrees_fwUp;
+    vector<int>    subPosetRanks_fwUp;
+
+    for (int k = 0; k < subPost_fwUp.Poset.size(); k++){
+        mPhylo rP = mPhylo(subPost_fwUp.Poset.at(k).Tree);
+        subPosetTrees_fwUp.push_back(rP.toNewick());
+        subPosetRanks_fwUp.push_back(subPost_fwUp.Poset.at(k).Tree.rank);
+    }
+
+    std::vector<std::pair<int,int>> edges_fwUp;
+    std::vector<int> antiChainEst_fwUp;
+
+    { int r = 1;
+      int v = subPost_fwUp.firstRank[r];
+      while (v != -1){
+          edges_fwUp.push_back({0,(v+1)});
+          antiChainEst_fwUp.push_back(subPost_fwUp.Poset[v].boundAntichain[0]);
+          v = subPost_fwUp.Poset[v].next;
+      }
+    }
+
+    for (int r = 2; r < (int)subPost_fwUp.firstRank.size(); ++r) {
+        int v = subPost_fwUp.firstRank[r];
+        while (v != -1){
+            for (int i = 0; i < subPost_fwUp.Poset[v].under.size(); ++i) {
+                int u = subPost_fwUp.Poset[v].under[i];
+                edges_fwUp.push_back({(u+1),(v+1)});
+                antiChainEst_fwUp.push_back(subPost_fwUp.Poset[v].boundAntichain[i]);
+            }
+            v = subPost_fwUp.Poset[v].next;
+        }
+    }
+
+    int nEdges_fwUp = edges_fwUp.size();
+    Rcpp::IntegerVector edgeFrom_fwUp(nEdges_fwUp), edgeTo_fwUp(nEdges_fwUp);
+    for (int i = 0; i < nEdges_fwUp; i++) {
+        edgeFrom_fwUp[i] = edges_fwUp[i].first;
+        edgeTo_fwUp[i]   = edges_fwUp[i].second;
+    }
+
+    // ------------------------------------------------------------------
+    // New fixed-width constructor, downwards orientation (top_width2, bottom_width2)
+    // ------------------------------------------------------------------
+    timer.tic("FixedWidthDownSubposet");
+    subPoset subPost_fwDn = subPoset(treeSample1, nSample1, compLeafSet,
+                                     top_width2, bottom_width2,
+                                     std::string("downwards"));
+    timer.toc("FixedWidthDownSubposet");
+
+    computeAllMaxLevelBounds(subPost_fwDn);
+
+    vector<string> subPosetTrees_fwDn;
+    vector<int>    subPosetRanks_fwDn;
+
+    for (int k = 0; k < subPost_fwDn.Poset.size(); k++){
+        mPhylo rP = mPhylo(subPost_fwDn.Poset.at(k).Tree);
+        subPosetTrees_fwDn.push_back(rP.toNewick());
+        subPosetRanks_fwDn.push_back(subPost_fwDn.Poset.at(k).Tree.rank);
+    }
+
+    std::vector<std::pair<int,int>> edges_fwDn;
+    std::vector<int> antiChainEst_fwDn;
+
+    { int r = 1;
+      int v = subPost_fwDn.firstRank[r];
+      while (v != -1){
+          edges_fwDn.push_back({0,(v+1)});
+          antiChainEst_fwDn.push_back(subPost_fwDn.Poset[v].boundAntichain[0]);
+          v = subPost_fwDn.Poset[v].next;
+      }
+    }
+
+    for (int r = 2; r < (int)subPost_fwDn.firstRank.size(); ++r) {
+        int v = subPost_fwDn.firstRank[r];
+        while (v != -1){
+            for (int i = 0; i < subPost_fwDn.Poset[v].under.size(); ++i) {
+                int u = subPost_fwDn.Poset[v].under[i];
+                edges_fwDn.push_back({(u+1),(v+1)});
+                antiChainEst_fwDn.push_back(subPost_fwDn.Poset[v].boundAntichain[i]);
+            }
+            v = subPost_fwDn.Poset[v].next;
+        }
+    }
+
+    int nEdges_fwDn = edges_fwDn.size();
+    Rcpp::IntegerVector edgeFrom_fwDn(nEdges_fwDn), edgeTo_fwDn(nEdges_fwDn);
+    for (int i = 0; i < nEdges_fwDn; i++) {
+        edgeFrom_fwDn[i] = edges_fwDn[i].first;
+        edgeTo_fwDn[i]   = edges_fwDn[i].second;
+    }
+
+    return Rcpp::List::create(
+        Rcpp::Named("subPosetTrees_U")       = Rcpp::wrap(subPosetTrees_upwards),
+        Rcpp::Named("subPosetRanks_U")       = Rcpp::wrap(subPosetRanks_upwards),
+        Rcpp::Named("subPosetNus_U")       = Rcpp::wrap(antiChainEst_upwards),
+        Rcpp::Named("CoveringPairsLower_U")  = edgeFrom_upwards,
+        Rcpp::Named("CoveringPairsUpper_U")  = edgeTo_upwards,
+        Rcpp::Named("subPosetTrees_B")       = Rcpp::wrap(subPosetTrees_basic),
+        Rcpp::Named("subPosetRanks_B")       = Rcpp::wrap(subPosetRanks_basic),
+        Rcpp::Named("subPosetNus_B")       = Rcpp::wrap(antiChainEst_basic),
+        Rcpp::Named("CoveringPairsLower_B")  = edgeFrom_basic,
+        Rcpp::Named("CoveringPairsUpper_B")  = edgeTo_basic,
+        Rcpp::Named("subPosetTrees_FU")      = Rcpp::wrap(subPosetTrees_fwUp),
+        Rcpp::Named("subPosetRanks_FU")      = Rcpp::wrap(subPosetRanks_fwUp),
+        Rcpp::Named("subPosetNus_FU")        = Rcpp::wrap(antiChainEst_fwUp),
+        Rcpp::Named("CoveringPairsLower_FU") = edgeFrom_fwUp,
+        Rcpp::Named("CoveringPairsUpper_FU") = edgeTo_fwUp,
+        Rcpp::Named("subPosetTrees_FD")      = Rcpp::wrap(subPosetTrees_fwDn),
+        Rcpp::Named("subPosetRanks_FD")      = Rcpp::wrap(subPosetRanks_fwDn),
+        Rcpp::Named("subPosetNus_FD")        = Rcpp::wrap(antiChainEst_fwDn),
+        Rcpp::Named("CoveringPairsLower_FD") = edgeFrom_fwDn,
+        Rcpp::Named("CoveringPairsUpper_FD") = edgeTo_fwDn
+    );
+
 }
 

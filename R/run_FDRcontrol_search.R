@@ -11,9 +11,13 @@
 #' @param SPbuilder String indication what method to use to build subposet.
 #' @param alpha Numeric value passed to Stable Search for stable threshold.
 #' @param q Numeric value passed to FDR control purposes.
+#' @param q0 Numeric value passed to subposet building process when building upwards (optional)
 #' @param tau Extra value for subposet building.
 #' @param Mt Number of maximal trees for basic-bifurcation subposet building
 #' @param rb Anchor rank for basic-bifurcation subposet building
+#' @param top_width Number of trees of maximal rank for the fixed-widths subposet building
+#' @param bottom_width Number of trees of rank 1 for the fixed-widths subposet building
+#' @param orientation Orientation for the fixed-widths subposet building 
 #' @param summarized Boolean factor indicating if the function is to be runned with a summarized version of the sample
 #'
 #' @return Output of completeSearchRcpp
@@ -25,8 +29,10 @@ run_FDRcontrol_search <- function(newicks = NULL, newicks1 = NULL, newicks2 = NU
                                   n1 = NULL,
                                   random_subsampling = FALSE,
                                   SPbuilder = "stability",
-                                  alpha = 0.85, q = 0.1, tau = 0.80, 
+                                  alpha = 0.85, q = 0.1, q0 = 0.5, tau = 0.80, 
                                   Mt = 1, rb = NULL,
+                                  top_width = NULL, bottom_width = 1,
+                                  orientation = "upwards",
                                   summarized = FALSE) {
   
   ## --- Argument validation -------------------------------------------------
@@ -79,13 +85,14 @@ run_FDRcontrol_search <- function(newicks = NULL, newicks1 = NULL, newicks2 = NU
     }
   }
   
-  if ((SPbuilder != "stability") && (SPbuilder != "basic") && (SPbuilder != "basic_auto") && (SPbuilder != "upwards")){
+  if ((SPbuilder != "stability") && (SPbuilder != "basic") && (SPbuilder != "basic_auto") && (SPbuilder != "upwards") && (SPbuilder != "fixed_width")){
     stop(
       "The subPoset builder method must be a valid option. It is either:\n",
       "SPbuilder = 'stability': Building a stable tree first and branching out from there\n",
       "SPbuilder = 'basic': For basic bifurcation with known number of maximal trees and bifurcation rank level.",
       "SPbuilder = 'basic_auto': For basic bifurcation with automatic selection of maximal trees and bifurcation rank level.",
-      "SPbuilder = 'upwards': For upwards bifurcation based on relaxed thresholds."
+      "SPbuilder = 'upwards': For upwards bifurcation based on relaxed thresholds.",
+      "SPbuilder = 'fixed_width': For the fixed-width constructor with upwards or downwards orientation."
     )
   }
   
@@ -242,13 +249,38 @@ run_FDRcontrol_search <- function(newicks = NULL, newicks1 = NULL, newicks2 = NU
                                        treeSample2R = cleaned_newicks2, nSample2R = Count_trees2,
                                        compLeafSetR = completeLeaveSet,
                                        MtR = Mt, rbR = rb, qR = q)
-    } else {
+    } else if (SPbuilder == "upwards") {
       res <- completeSearchRcppS_V3(treeSample1R = cleaned_newicks1, nSample1R = Count_trees1,
                                     treeSample2R = cleaned_newicks2, nSample2R = Count_trees2,
                                     compLeafSetR = completeLeaveSet,
-                                    qR = q, qoR = 0.5)
+                                    qR = q, qoR = q0)
+    } else if (SPbuilder == "fixed_width") {
+      
+        if(is.null(top_width)){
+          top_width = floor((2*length(completeLeaveSet) - 7)/2)
+        }
+      
+      if (orientation == "upwards"){
+        if (top_width < bottom_width){
+          stop("In the upwards orientation, top_width should be more or equal than bottom_width.")
+        } 
+      } else if (orientation == "downwards"){
+        if (top_width > bottom_width){
+          stop("In the downwards orientation, bottom_width should be more or equal than top_width.")
+        } 
+      } else {
+        stop("Orientation must be 'upwards' or 'downwards'")
+      }
+      
+      res <- completeSearchRcppS_V4(treeSample1R = cleaned_newicks1, nSample1R = Count_trees1,
+                                    treeSample2R = cleaned_newicks2, nSample2R = Count_trees2,
+                                    compLeafSetR = completeLeaveSet,
+                                    qR = q,
+                                    top_widthR = top_width,
+                                    bottom_widthR = bottom_width,
+                                    orientationR = orientation)
     }
-    
+
   } else {
     ## --- Write cleaned trees back to Newick strings ---------------------------
     cleaned_newicks1 <- vapply(trees1, ape::write.tree, FUN.VALUE = character(1))

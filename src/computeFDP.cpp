@@ -29,5 +29,9 @@ float computeFDP(CharacterVector treeR1, CharacterVector treeR2) {
     pTree tree1 = pTree(as<std::string>(treeR1));
     pTree tree2 = pTree(as<std::string>(treeR2));
     
-    return ((tree1.rank - rho(tree1, tree2))*1.0/tree1.rank);
+    if (tree1.rank == 0){
+        return 0;
+    } else {
+        return ((tree1.rank - rho(tree1, tree2))*1.0/tree1.rank);
+    }
 }

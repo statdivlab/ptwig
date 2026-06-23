@@ -934,7 +934,7 @@ pTree FDRSearchGreedy(vector<pTree> treeSample, vector<int> nSample, vector<vect
     int B = std::accumulate(nSample.begin(), nSample.end(), 0);
     int rmax = static_cast<int>(SP.firstRank.size() - 1);
     int numTrees = static_cast<int>(treeSample.size());
-    int numNodes = static_cast<int>(SP.Poset.size());
+    
 
     // Score for the bottom-level transition (rank-1 node standing alone):
     // fraction of trees for which rho(node, T) > 0, shifted by lbEta
@@ -1038,7 +1038,7 @@ pTree FDRSearchGreedy(vector<pTree> treeSample, vector<vector<oRho>> storedORho,
 
     int rmax = static_cast<int>(SP.firstRank.size() - 1);
     int numTrees = static_cast<int>(treeSample.size());
-    int numNodes = static_cast<int>(SP.Poset.size());
+    
 
     // Score for the bottom-level transition (rank-1 node standing alone):
     // fraction of trees for which rho(node, T) > 0, shifted by lbEta
@@ -1087,17 +1087,17 @@ pTree FDRSearchGreedy(vector<pTree> treeSample, vector<vector<oRho>> storedORho,
     int current = -1;
     for (int idx : rank1Nodes) {
         float s = scoreBase(idx);
-        cout << "Rank-1 node " << idx << " score=" << s
-             << " thresh=" << threshold(idx) << "\n" << std::flush;
+        //cout << "Rank-1 node " << idx << " score=" << s
+        //     << " thresh=" << threshold(idx) << "\n" << std::flush;
         if (s >= threshold(idx)) {
             current = idx;
-            cout << "Selected rank-1 node " << idx << "\n" << std::flush;
+            //cout << "Selected rank-1 node " << idx << "\n" << std::flush;
             break;
         }
     }
 
     if (current == -1) {
-        cout << "No rank-1 node passes threshold. Returning empty.\n" << std::flush;
+        //cout << "No rank-1 node passes threshold. Returning empty.\n" << std::flush;
         return {pTree("();")};
     }
 
@@ -1116,25 +1116,25 @@ pTree FDRSearchGreedy(vector<pTree> treeSample, vector<vector<oRho>> storedORho,
         int next = -1;
         for (int upIdx : shuffled) {
             float s = scoreTransition(current, upIdx);
-            cout << "  Transition " << current << " -> " << upIdx
-                 << " score=" << s << " thresh=" << threshold(upIdx) << "\n" << std::flush;
+            //cout << "  Transition " << current << " -> " << upIdx
+            //     << " score=" << s << " thresh=" << threshold(upIdx) << "\n" << std::flush;
             if (s >= threshold(upIdx)) {
                 next = upIdx;
-                cout << "  Moving up to " << upIdx << "\n" << std::flush;
+                //cout << "  Moving up to " << upIdx << "\n" << std::flush;
                 break;
             }
         }
 
         if (next == -1) {
-            cout << "No upward transition passes from node " << current
-                 << ". Stopping.\n" << std::flush;
+            //cout << "No upward transition passes from node " << current
+            //     << ". Stopping.\n" << std::flush;
             break;  // stuck — report current as result
         }
 
         current = next;
     }
 
-    cout << "Final node: " << current << "\n" << std::flush;
+    //cout << "Final node: " << current << "\n" << std::flush;
     return { SP.Poset.at(current).Tree };
 }
 
@@ -1143,15 +1143,18 @@ pTree FDRSearchGreedy(vector<pTree> treeSample, vector<int> nSample, vector<vect
     int B = std::accumulate(nSample.begin(), nSample.end(), 0);
     int rmax = static_cast<int>(SP.firstRank.size() - 1);
     int numTrees = static_cast<int>(treeSample.size());
-    int numNodes = static_cast<int>(SP.Poset.size());
+    
 
     // Score for the bottom-level transition (rank-1 node standing alone):
     // fraction of trees for which rho(node, T) > 0, shifted by lbEta
     auto scoreBase = [&](int nodeIdx) -> float {
         float sum = 0;
-        for (int t = 0; t < numTrees; ++t)
+        for (int t = 0; t < numTrees; ++t){
+            //cout << " ... for nodeIdx = " << nodeIdx << "and t = " << t << " \n" << std::flush; 
             if (storedORho.at(nodeIdx).at(t).rho > 0)
                 sum += nSample.at(t);
+            //cout << " ... it passed \n" << std::flush;
+        }
         return (sum / B);
     };
 
@@ -1159,28 +1162,42 @@ pTree FDRSearchGreedy(vector<pTree> treeSample, vector<int> nSample, vector<vect
     // fraction of trees where rho increases, shifted by lbEta of the parent
     auto scoreTransition = [&](int TaIdx, int TbIdx) -> float {
         float sum = 0;
-        for (int t = 0; t < numTrees; ++t)
+        for (int t = 0; t < numTrees; ++t){
+            //cout << " ... for TbIdx = " << TbIdx << " and TaIdx = " << TaIdx << "and t = " << t << " \n" << std::flush;
             if ((storedORho.at(TbIdx).at(t).rho - storedORho.at(TaIdx).at(t).rho) > 0)
                 sum += nSample.at(t);
+            //cout << " ... it passed \n" << std::flush;
+        }
+            
         return (sum / B);
     };
 
     // Threshold for a given node
     auto threshold = [&](int nodeIdx, int childIdx) -> float {
+        //cout << " ... in Poset for nodeIdx = " << nodeIdx << "\n" << std::flush;
         float omega = static_cast<float>(rmax - SP.Poset.at(nodeIdx).Tree.rank + 1)
                     / static_cast<float>(rmax);
+        //cout << " ... All Good \n" << std::flush;
         float taZeta = 1.0f/(3.0f);
         if (SP.Poset.at(nodeIdx).Tree.rank > 1){
+            //cout << " ..... More complex idx = ";
+            //cout << SP.Poset.at(nodeIdx).under[childIdx] << "\n" << std::flush;
             taZeta = min(SP.Poset.at(SP.Poset.at(nodeIdx).under[childIdx]).zeta, 0.5f);
+            //cout << " ..... All good still \n" << std::flush;
         } 
         
-        return kapThreshold(omega, q, B, SP.Poset.at(nodeIdx).boundAntichain[childIdx]);
+        //cout << " ... childIdx = " << childIdx << "\n" << std::flush;
+        //cout << " ... The value with ... is ";
+        //cout << SP.Poset.at(nodeIdx).boundAntichain[childIdx] << "\n" << std::flush;
+        return (kapThreshold(omega, q, B, SP.Poset.at(nodeIdx).boundAntichain[childIdx]) + taZeta);
     };
 
     // ----------------------------------------------------------------
     // Step 1: scan rank-1 nodes in random order, pick first that passes
     // ----------------------------------------------------------------
     int curIndx = SP.firstRank.at(1);
+    
+    //cout<< "It passed the first firstRank \n" << std::flush; 
 
     // Collect all rank-1 node indices
     vector<int> rank1Nodes;
@@ -1188,6 +1205,8 @@ pTree FDRSearchGreedy(vector<pTree> treeSample, vector<int> nSample, vector<vect
         rank1Nodes.push_back(curIndx);
         curIndx = SP.Poset.at(curIndx).next;
     }
+    
+    //cout<< "It passed the while curIndx \n" << std::flush; 
 
     // Shuffle for random order
     auto rd  = std::random_device{};
@@ -1195,28 +1214,33 @@ pTree FDRSearchGreedy(vector<pTree> treeSample, vector<int> nSample, vector<vect
     shuffle(rank1Nodes.begin(), rank1Nodes.end(), rng);
 
     int current = -1;
+    //cout << "Entering the forrrrr \n" << std::flush;
     for (int idx : rank1Nodes) {
         float s = scoreBase(idx);
-        cout << "Rank-1 node " << idx << " score=" << s
-             << " thresh=" << threshold(idx,0) << "\n" << std::flush;
+        ////cout << "Rank-1 node " << idx << " score=" << s
+        //     << " thresh=" << threshold(idx,0) << "\n" << std::flush;
         if (s >= threshold(idx, 0)) {
             current = idx;
-            cout << "Selected rank-1 node " << idx << "\n" << std::flush;
+            //cout << "Selected rank-1 node " << idx << "\n" << std::flush;
             break;
         }
     }
-
+    //cout << "Exiting the forrrrr \n" << std::flush;
     if (current == -1) {
-        cout << "No rank-1 node passes threshold. Returning empty.\n" << std::flush;
-        return {pTree("();")};
+        //cout << "No rank-1 node passes threshold. Returning empty.\n" << std::flush;
+        pTree emptyTree  = pTree("();");
+        //cout << "Empty tree created \n" << std::flush; 
+        return {emptyTree};
     }
 
     // ----------------------------------------------------------------
     // Step 2: greedily climb upward
     // ----------------------------------------------------------------
+    //cout << "In greedily climb current = " << current << "\n" << std::flush; 
     while (!SP.Poset.at(current).over.empty()) {
+        //cout << ". current = " << current << "\n" << std::flush;  
         const vector<int>& candidates = SP.Poset.at(current).over;
-
+        //cout << ". Located \n" << std::flush; 
         // Shuffle candidates for random order
         vector<int> shuffled(candidates.begin(), candidates.end());
         auto rd2  = std::random_device{};
@@ -1227,24 +1251,25 @@ pTree FDRSearchGreedy(vector<pTree> treeSample, vector<int> nSample, vector<vect
         for (int upIdx : shuffled) {
             float s = scoreTransition(current, upIdx);
             int chldIdx = static_cast<int>(find(SP.Poset.at(upIdx).under.begin(), SP.Poset.at(upIdx).under.end(), current) - SP.Poset.at(upIdx).under.begin());
-            cout << "  Transition " << current << " -> " << upIdx
-                 << " score=" << s << " thresh=" << threshold(upIdx, chldIdx) << "\n" << std::flush;
+            //cout << "  Transition " << current << " -> " << upIdx
+            //     << " score=" << s << " thresh=" << threshold(upIdx, chldIdx) << "\n" << std::flush;
+            //cout << "! for current = " << current << " and upIdx = " << upIdx << " then chldIdx = " << chldIdx << "\n" << std::flush; 
             if (s >= threshold(upIdx, chldIdx)) {
                 next = upIdx;
-                cout << "  Moving up to " << upIdx << "\n" << std::flush;
+                //cout << "  Moving up to " << upIdx << "\n" << std::flush;
                 break;
             }
         }
 
         if (next == -1) {
-            cout << "No upward transition passes from node " << current
-                 << ". Stopping.\n" << std::flush;
+            //cout << "No upward transition passes from node " << current
+                 //<< ". Stopping.\n" << std::flush;
             break;  // stuck — report current as result
         }
 
         current = next;
     }
 
-    cout << "Final node: " << current << "\n" << std::flush;
+    //cout << "Final node: " << current << "\n" << std::flush;
     return { SP.Poset.at(current).Tree };
 }

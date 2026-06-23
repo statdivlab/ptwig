@@ -95,6 +95,25 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// completeSearchRcppS_V4
+CharacterVector completeSearchRcppS_V4(CharacterVector treeSample1R, IntegerVector nSample1R, CharacterVector treeSample2R, IntegerVector nSample2R, CharacterVector compLeafSetR, double qR, int top_widthR, int bottom_widthR, std::string orientationR);
+RcppExport SEXP _ptwig_completeSearchRcppS_V4(SEXP treeSample1RSEXP, SEXP nSample1RSEXP, SEXP treeSample2RSEXP, SEXP nSample2RSEXP, SEXP compLeafSetRSEXP, SEXP qRSEXP, SEXP top_widthRSEXP, SEXP bottom_widthRSEXP, SEXP orientationRSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< CharacterVector >::type treeSample1R(treeSample1RSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type nSample1R(nSample1RSEXP);
+    Rcpp::traits::input_parameter< CharacterVector >::type treeSample2R(treeSample2RSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type nSample2R(nSample2RSEXP);
+    Rcpp::traits::input_parameter< CharacterVector >::type compLeafSetR(compLeafSetRSEXP);
+    Rcpp::traits::input_parameter< double >::type qR(qRSEXP);
+    Rcpp::traits::input_parameter< int >::type top_widthR(top_widthRSEXP);
+    Rcpp::traits::input_parameter< int >::type bottom_widthR(bottom_widthRSEXP);
+    Rcpp::traits::input_parameter< std::string >::type orientationR(orientationRSEXP);
+    rcpp_result_gen = Rcpp::wrap(completeSearchRcppS_V4(treeSample1R, nSample1R, treeSample2R, nSample2R, compLeafSetR, qR, top_widthR, bottom_widthR, orientationR));
+    return rcpp_result_gen;
+END_RCPP
+}
 // SPAnalysisR
 Rcpp::List SPAnalysisR(CharacterVector treeStar, CharacterVector treeSample1R, CharacterVector treeSample2R, CharacterVector bigTreeSampleR, CharacterVector compLeafSetR, double alphaR, double qR, double tauR, double deltaR);
 RcppExport SEXP _ptwig_SPAnalysisR(SEXP treeStarSEXP, SEXP treeSample1RSEXP, SEXP treeSample2RSEXP, SEXP bigTreeSampleRSEXP, SEXP compLeafSetRSEXP, SEXP alphaRSEXP, SEXP qRSEXP, SEXP tauRSEXP, SEXP deltaRSEXP) {
@@ -178,8 +197,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // simpleSPAnalysis
-Rcpp::List simpleSPAnalysis(CharacterVector treeSample1R, IntegerVector nSample1R, CharacterVector compLeafSetR, int MtR, int rbR, double qR, double deltaR);
-RcppExport SEXP _ptwig_simpleSPAnalysis(SEXP treeSample1RSEXP, SEXP nSample1RSEXP, SEXP compLeafSetRSEXP, SEXP MtRSEXP, SEXP rbRSEXP, SEXP qRSEXP, SEXP deltaRSEXP) {
+Rcpp::List simpleSPAnalysis(CharacterVector treeSample1R, IntegerVector nSample1R, CharacterVector compLeafSetR, int MtR, int rbR, double qR, double q0R, int top_width1, int bottom_width1, int top_width2, int bottom_width2);
+RcppExport SEXP _ptwig_simpleSPAnalysis(SEXP treeSample1RSEXP, SEXP nSample1RSEXP, SEXP compLeafSetRSEXP, SEXP MtRSEXP, SEXP rbRSEXP, SEXP qRSEXP, SEXP q0RSEXP, SEXP top_width1SEXP, SEXP bottom_width1SEXP, SEXP top_width2SEXP, SEXP bottom_width2SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -189,8 +208,12 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type MtR(MtRSEXP);
     Rcpp::traits::input_parameter< int >::type rbR(rbRSEXP);
     Rcpp::traits::input_parameter< double >::type qR(qRSEXP);
-    Rcpp::traits::input_parameter< double >::type deltaR(deltaRSEXP);
-    rcpp_result_gen = Rcpp::wrap(simpleSPAnalysis(treeSample1R, nSample1R, compLeafSetR, MtR, rbR, qR, deltaR));
+    Rcpp::traits::input_parameter< double >::type q0R(q0RSEXP);
+    Rcpp::traits::input_parameter< int >::type top_width1(top_width1SEXP);
+    Rcpp::traits::input_parameter< int >::type bottom_width1(bottom_width1SEXP);
+    Rcpp::traits::input_parameter< int >::type top_width2(top_width2SEXP);
+    Rcpp::traits::input_parameter< int >::type bottom_width2(bottom_width2SEXP);
+    rcpp_result_gen = Rcpp::wrap(simpleSPAnalysis(treeSample1R, nSample1R, compLeafSetR, MtR, rbR, qR, q0R, top_width1, bottom_width1, top_width2, bottom_width2));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -250,18 +273,6 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< CharacterVector >::type treeR1(treeR1SEXP);
     Rcpp::traits::input_parameter< CharacterVector >::type treeR2(treeR2SEXP);
     rcpp_result_gen = Rcpp::wrap(computeSimilarity(treeR1, treeR2));
-    return rcpp_result_gen;
-END_RCPP
-}
-// computeSimilarity2
-int computeSimilarity2(CharacterVector treeR1, CharacterVector treeR2);
-RcppExport SEXP _ptwig_computeSimilarity2(SEXP treeR1SEXP, SEXP treeR2SEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< CharacterVector >::type treeR1(treeR1SEXP);
-    Rcpp::traits::input_parameter< CharacterVector >::type treeR2(treeR2SEXP);
-    rcpp_result_gen = Rcpp::wrap(computeSimilarity2(treeR1, treeR2));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -352,17 +363,17 @@ static const R_CallMethodDef CallEntries[] = {
     {"_ptwig_completeSearchRcppS", (DL_FUNC) &_ptwig_completeSearchRcppS, 8},
     {"_ptwig_completeSearchRcppS_V2", (DL_FUNC) &_ptwig_completeSearchRcppS_V2, 8},
     {"_ptwig_completeSearchRcppS_V3", (DL_FUNC) &_ptwig_completeSearchRcppS_V3, 7},
+    {"_ptwig_completeSearchRcppS_V4", (DL_FUNC) &_ptwig_completeSearchRcppS_V4, 9},
     {"_ptwig_SPAnalysisR", (DL_FUNC) &_ptwig_SPAnalysisR, 9},
     {"_ptwig_SPAnalysisR2", (DL_FUNC) &_ptwig_SPAnalysisR2, 9},
     {"_ptwig_SPAnalysisRS", (DL_FUNC) &_ptwig_SPAnalysisRS, 12},
     {"_ptwig_SPAnalysisR2S", (DL_FUNC) &_ptwig_SPAnalysisR2S, 12},
-    {"_ptwig_simpleSPAnalysis", (DL_FUNC) &_ptwig_simpleSPAnalysis, 7},
+    {"_ptwig_simpleSPAnalysis", (DL_FUNC) &_ptwig_simpleSPAnalysis, 11},
     {"_ptwig_VerifyingRho", (DL_FUNC) &_ptwig_VerifyingRho, 2},
     {"_ptwig_computeFD", (DL_FUNC) &_ptwig_computeFD, 2},
     {"_ptwig_computeFDP", (DL_FUNC) &_ptwig_computeFDP, 2},
     {"_ptwig_computeRank", (DL_FUNC) &_ptwig_computeRank, 1},
     {"_ptwig_computeSimilarity", (DL_FUNC) &_ptwig_computeSimilarity, 2},
-    {"_ptwig_computeSimilarity2", (DL_FUNC) &_ptwig_computeSimilarity2, 2},
     {"_ptwig_computeNewSubposet", (DL_FUNC) &_ptwig_computeNewSubposet, 5},
     {"_ptwig_nullCoveringProbComputation", (DL_FUNC) &_ptwig_nullCoveringProbComputation, 8},
     {"_ptwig_nullCoveringProbComputationS", (DL_FUNC) &_ptwig_nullCoveringProbComputationS, 10},

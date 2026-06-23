@@ -60,7 +60,9 @@ class subPoset{
     subPoset(std::vector<pTree> Sample, std::vector<int> nSample, std::set<std::string> compLeafSet, int Mt, int rb, bool Constructive);
     
     subPoset(std::vector<pTree> Sample, std::vector<int> nSample, std::set<std::string> compLeafSet, float q);
-    
+
+    subPoset(std::vector<pTree> Sample, std::vector<int> nSample, std::set<std::string> compLeafSet, int top_width, int bottom_width, std::string orientation);
+
     void print();
     
     void printRd();

@@ -21,6 +21,10 @@ completeSearchRcppS_V3 <- function(treeSample1R, nSample1R, treeSample2R, nSampl
     .Call(`_ptwig_completeSearchRcppS_V3`, treeSample1R, nSample1R, treeSample2R, nSample2R, compLeafSetR, qR, qoR)
 }
 
+completeSearchRcppS_V4 <- function(treeSample1R, nSample1R, treeSample2R, nSample2R, compLeafSetR, qR, top_widthR, bottom_widthR, orientationR) {
+    .Call(`_ptwig_completeSearchRcppS_V4`, treeSample1R, nSample1R, treeSample2R, nSample2R, compLeafSetR, qR, top_widthR, bottom_widthR, orientationR)
+}
+
 SPAnalysisR <- function(treeStar, treeSample1R, treeSample2R, bigTreeSampleR, compLeafSetR, alphaR, qR, tauR, deltaR) {
     .Call(`_ptwig_SPAnalysisR`, treeStar, treeSample1R, treeSample2R, bigTreeSampleR, compLeafSetR, alphaR, qR, tauR, deltaR)
 }
@@ -37,8 +41,8 @@ SPAnalysisR2S <- function(treeStar, treeSample1R, nSample1R, treeSample2R, nSamp
     .Call(`_ptwig_SPAnalysisR2S`, treeStar, treeSample1R, nSample1R, treeSample2R, nSample2R, bigTreeSampleR, nBSampleR, compLeafSetR, MtR, rbR, qR, deltaR)
 }
 
-simpleSPAnalysis <- function(treeSample1R, nSample1R, compLeafSetR, MtR, rbR, qR, deltaR) {
-    .Call(`_ptwig_simpleSPAnalysis`, treeSample1R, nSample1R, compLeafSetR, MtR, rbR, qR, deltaR)
+simpleSPAnalysis <- function(treeSample1R, nSample1R, compLeafSetR, MtR, rbR, qR, q0R, top_width1, bottom_width1, top_width2, bottom_width2) {
+    .Call(`_ptwig_simpleSPAnalysis`, treeSample1R, nSample1R, compLeafSetR, MtR, rbR, qR, q0R, top_width1, bottom_width1, top_width2, bottom_width2)
 }
 
 VerifyingRho <- function(treeR, compLeafSetR) {
@@ -59,10 +63,6 @@ computeRank <- function(treeR) {
 
 computeSimilarity <- function(treeR1, treeR2) {
     .Call(`_ptwig_computeSimilarity`, treeR1, treeR2)
-}
-
-computeSimilarity2 <- function(treeR1, treeR2) {
-    .Call(`_ptwig_computeSimilarity2`, treeR1, treeR2)
 }
 
 computeNewSubposet <- function(treeSampleR, nSampleR, compLeafSetR, MtR, rbR) {
