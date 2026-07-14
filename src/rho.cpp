@@ -137,7 +137,7 @@ vector<Split> splitInter(const Split& s1, const Split& s2) {
 // inner loop so they aren't recomputed on every comparison against existing
 // entries. st.LeavesInSplit().size() is also cached per iteration.
 // ---------------------------------------------------------------------------
-vector<Split> vectSplitInter(pTree T1, pTree T2) {
+vector<Split> vectSplitInter(const pTree& T1, const pTree& T2) {
     vector<Split> resultSet;
     vector<set<string>> resultLeaves; // parallel cache of LeavesInSplit() for each entry
 
@@ -210,7 +210,7 @@ vector<Split> vectSplitInter(pTree T1, pTree T2) {
 //
 // No logic, no control flow, no data structure is changed.
 // ---------------------------------------------------------------------------
-int rho(pTree T1, pTree T2) {
+int rho(const pTree& T1, const pTree& T2) {
     vector<Split> intSplits = vectSplitInter(T1, T2);
     vector<int> rankPotential;
 
@@ -354,7 +354,7 @@ oRho::oRho(int nrho, std::vector<std::set<std::string>> newPresLeaves){
 }
 
 
-oRho rho(pTree U, pTree V, oRho baseORho, pTree Tl, string extral){
+oRho rho(const pTree& U, const pTree& V, const oRho& baseORho, const pTree& Tl, const string& extral){
     if (!Tl.leafSet.count(extral)){
         return oRho(baseORho.rho, baseORho.presLeaves);
     }
@@ -386,7 +386,7 @@ oRho rho(pTree U, pTree V, oRho baseORho, pTree Tl, string extral){
         
 }
 
-oRho rho(pTree U, pTree V, oRho baseORho, pTree Tl, Split extraS){
+oRho rho(const pTree& U, const pTree& V, const oRho& baseORho, const pTree& Tl, const Split& extraS){
     set<string> intLeaves;
     set_intersection(V.leafSet.begin(), V.leafSet.end(),
                      Tl.leafSet.begin(), Tl.leafSet.end(),                         
@@ -440,37 +440,41 @@ oRho rho(pTree U, pTree V, oRho baseORho, pTree Tl, Split extraS){
         
 }
 
-oRho rho(pTree V, pTree U, oRho baseORho, pTree Tl) {
-    
+oRho rho(const pTree& V, const pTree& U, const oRho& baseORho, const pTree& Tl) {
+
     set<string> newleaf;
     int bRho = -1;
-    vector<set<string>> potentialPresLeaves;
-    
+    // Deduped witness sets: a set<set<string>> guarantees uniqueness of the
+    // leaf sets in presLeaves (identical witnesses can otherwise be pushed many
+    // times and then compound up the incremental chain). Emitted as a vector
+    // at each return, since oRho stores vector<set<string>>.
+    set<set<string>> potentialPresLeaves;
+
     if (V.rank == 1){
         set_intersection(V.leafSet.begin(), V.leafSet.end(),
                          Tl.leafSet.begin(), Tl.leafSet.end(),
                          inserter(newleaf, newleaf.begin()));
-        
-        potentialPresLeaves.push_back(newleaf);
-        if (Tl.over(V)) return oRho(1, potentialPresLeaves);
-        return oRho(0, potentialPresLeaves);
+
+        vector<set<string>> out{ newleaf };
+        if (Tl.over(V)) return oRho(1, out);
+        return oRho(0, out);
     }
-    
+
     set_difference(V.leafSet.begin(), V.leafSet.end(),
                        U.leafSet.begin(), U.leafSet.end(),
                        inserter(newleaf, newleaf.begin()));
-    
-        
+
+
     if (newleaf.empty()){
         set<string> intLeaves;
         set_intersection(V.leafSet.begin(), V.leafSet.end(),
                          Tl.leafSet.begin(), Tl.leafSet.end(),
                          inserter(intLeaves, intLeaves.begin()));
-        
+
         Split s =  findExtraSplit(U, V);
-        
-        vector<set<string>> SepL =  minimalSeparatingLeafSets(s, U); 
-        
+
+        vector<set<string>> SepL =  minimalSeparatingLeafSets(s, U);
+
         vector<std::set<std::string>> SepLeaves;
         SepLeaves.reserve(SepL.size());
 
@@ -482,18 +486,18 @@ oRho rho(pTree V, pTree U, oRho baseORho, pTree Tl) {
             SepLeaves.push_back(std::move(inter));
         }
 
-        
+
         {pTree Ttemp = commonLower(V,Tl, intLeaves);
          bRho = Ttemp.rank;
-         potentialPresLeaves.push_back(intLeaves);
+         potentialPresLeaves.insert(intLeaves);
         }
-        for (set<string> tLeaves : baseORho.presLeaves){
+        for (const set<string>& tLeaves : baseORho.presLeaves){
             //set<string> extraLeaves;
             //set_difference(intLeaves.begin(), intLeaves.end(),
             //               tLeaves.begin(), tLeaves.end(),
             //               inserter(extraLeaves, extraLeaves.begin()));
-            
-            for (set<string> eLeaves : SepLeaves){
+
+            for (const set<string>& eLeaves : SepLeaves){
                 if (!std::includes(tLeaves.begin(), tLeaves.end(),
                                     eLeaves.begin(), eLeaves.end())){
                     set<string> unionLeaves;
@@ -505,52 +509,62 @@ oRho rho(pTree V, pTree U, oRho baseORho, pTree Tl) {
                     if (Ttemp.rank > bRho){
                     bRho = Ttemp.rank;
                     potentialPresLeaves.clear();
-                    potentialPresLeaves.push_back(unionLeaves);
+                    potentialPresLeaves.insert(unionLeaves);
                     } else if (Ttemp.rank == bRho){
-                        potentialPresLeaves.push_back(unionLeaves);
+                        potentialPresLeaves.insert(unionLeaves);
                     }
                 }
-                
+
             }
-            if(tLeaves.size() < intLeaves.size()){   
+            if(tLeaves.size() < intLeaves.size()){
                 pTree Ttemp = commonLower(V, Tl, tLeaves);
                 if (Ttemp.rank > bRho){
                 bRho = Ttemp.rank;
                 potentialPresLeaves.clear();
-                potentialPresLeaves.push_back(tLeaves);
+                potentialPresLeaves.insert(tLeaves);
                 } else if (Ttemp.rank == bRho){
-                    potentialPresLeaves.push_back(tLeaves);
+                    potentialPresLeaves.insert(tLeaves);
                 }
             }
         }
-        
+
     } else {
+        // By construction U sits exactly one leaf below V here, so newleaf must
+        // be a single leaf. The logic below only inspects newleaf.begin() but
+        // unions all of newleaf, so a multi-leaf newleaf could inject a leaf
+        // outside V.leafSet ∩ Tl.leafSet. Enforce the precondition.
+        if (newleaf.size() != 1)
+            Rcpp::stop("rho: expected exactly one new leaf between U and V, got " +
+                       std::to_string(newleaf.size()));
+
         if (!Tl.leafSet.count(*newleaf.begin())){
             return oRho(baseORho.rho, baseORho.presLeaves);
         }
-        
+
         bRho = baseORho.rho;
-        potentialPresLeaves = baseORho.presLeaves;
-        
-        for (set<string> tLeaves :  baseORho.presLeaves){
+        potentialPresLeaves.insert(baseORho.presLeaves.begin(),
+                                   baseORho.presLeaves.end());
+
+        for (const set<string>& tLeaves :  baseORho.presLeaves){
             set<string> unionLeaves;
-            
+
             set_union(tLeaves.begin(), tLeaves.end(),
               newleaf.begin(), newleaf.end(),
               inserter(unionLeaves, unionLeaves.begin()));
-            
+
             pTree Ttemp = commonLower(V, Tl, unionLeaves);
-            
+
             if (Ttemp.rank > bRho){
                 bRho = Ttemp.rank;
                 potentialPresLeaves.clear();
-                potentialPresLeaves.push_back(unionLeaves);
+                potentialPresLeaves.insert(unionLeaves);
             } else if (Ttemp.rank == bRho){
-                potentialPresLeaves.push_back(unionLeaves);
+                potentialPresLeaves.insert(unionLeaves);
             }
-            
+
         }
     }
-    
-    return oRho(bRho, potentialPresLeaves);
+
+    vector<set<string>> out(potentialPresLeaves.begin(), potentialPresLeaves.end());
+    return oRho(bRho, out);
 }

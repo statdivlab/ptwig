@@ -3,7 +3,7 @@
 
 #include "pTree.h"
 
-int rho(pTree T1, pTree T2);
+int rho(const pTree& T1, const pTree& T2);
 
 class oRho{
     public:
@@ -14,10 +14,10 @@ class oRho{
     
     oRho(int nrho, std::vector<std::set<std::string>> newPresLeaves);
 };
-oRho rho(pTree U, pTree V, oRho baseORho, pTree Tl, std::string extral);
+oRho rho(const pTree& U, const pTree& V, const oRho& baseORho, const pTree& Tl, const std::string& extral);
 
-oRho rho(pTree U, pTree V, oRho baseORho, pTree Tl, Split extraS);
+oRho rho(const pTree& U, const pTree& V, const oRho& baseORho, const pTree& Tl, const Split& extraS);
 
-oRho rho(pTree V, pTree U, oRho baseORho, pTree Tl);
+oRho rho(const pTree& V, const pTree& U, const oRho& baseORho, const pTree& Tl);
 
 #endif

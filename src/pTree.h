@@ -73,7 +73,8 @@ class pTree{
     std::string printSt();
 
     pTree TDR(std::set<std::string> L);
-    
+    pTree TDR(std::set<std::string> L) const;        // const overload for rho/commonLower
+
     pTree Remove(Split s);
     
     pTree Remove(std::string a);
@@ -95,6 +96,6 @@ class pTree{
     
 };
 
-pTree commonLower(pTree T1, pTree T2, std::set<std::string> sLeaves);
+pTree commonLower(const pTree& T1, const pTree& T2, const std::set<std::string>& sLeaves);
 
 #endif

@@ -342,6 +342,31 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// computeStabilityRcpp
+DataFrame computeStabilityRcpp(CharacterVector treeR, CharacterVector treeSampleR);
+RcppExport SEXP _ptwig_computeStabilityRcpp(SEXP treeRSEXP, SEXP treeSampleRSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< CharacterVector >::type treeR(treeRSEXP);
+    Rcpp::traits::input_parameter< CharacterVector >::type treeSampleR(treeSampleRSEXP);
+    rcpp_result_gen = Rcpp::wrap(computeStabilityRcpp(treeR, treeSampleR));
+    return rcpp_result_gen;
+END_RCPP
+}
+// computeStabilityRcppS
+DataFrame computeStabilityRcppS(CharacterVector treeR, CharacterVector treeSampleR, IntegerVector nSampleR);
+RcppExport SEXP _ptwig_computeStabilityRcppS(SEXP treeRSEXP, SEXP treeSampleRSEXP, SEXP nSampleRSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< CharacterVector >::type treeR(treeRSEXP);
+    Rcpp::traits::input_parameter< CharacterVector >::type treeSampleR(treeSampleRSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type nSampleR(nSampleRSEXP);
+    rcpp_result_gen = Rcpp::wrap(computeStabilityRcppS(treeR, treeSampleR, nSampleR));
+    return rcpp_result_gen;
+END_RCPP
+}
 // stableSearchRcppS
 CharacterVector stableSearchRcppS(CharacterVector treeSampleR, IntegerVector nSampleR, CharacterVector compLeafSetR, double alphaR);
 RcppExport SEXP _ptwig_stableSearchRcppS(SEXP treeSampleRSEXP, SEXP nSampleRSEXP, SEXP compLeafSetRSEXP, SEXP alphaRSEXP) {
@@ -378,6 +403,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_ptwig_nullCoveringProbComputation", (DL_FUNC) &_ptwig_nullCoveringProbComputation, 8},
     {"_ptwig_nullCoveringProbComputationS", (DL_FUNC) &_ptwig_nullCoveringProbComputationS, 10},
     {"_ptwig_stableSearchRcpp", (DL_FUNC) &_ptwig_stableSearchRcpp, 3},
+    {"_ptwig_computeStabilityRcpp", (DL_FUNC) &_ptwig_computeStabilityRcpp, 2},
+    {"_ptwig_computeStabilityRcppS", (DL_FUNC) &_ptwig_computeStabilityRcppS, 3},
     {"_ptwig_stableSearchRcppS", (DL_FUNC) &_ptwig_stableSearchRcppS, 4},
     {NULL, NULL, 0}
 };

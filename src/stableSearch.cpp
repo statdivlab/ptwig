@@ -660,6 +660,127 @@ CharacterVector stableSearchRcpp(CharacterVector treeSampleR,
     return out;
 }
 
+// Build the vector<pTree> sample from a CharacterVector of Newick strings.
+static std::vector<pTree> buildTreeSample(CharacterVector treeSampleR) {
+    std::vector<pTree> treeSample;
+    treeSample.reserve(treeSampleR.size());
+    for (int i = 0; i < treeSampleR.size(); i++) {
+        if (treeSampleR[i] == NA_STRING)
+            stop("treeSample cannot contain NA.");
+        treeSample.emplace_back(pTree(as<std::string>(treeSampleR[i])));
+    }
+    return treeSample;
+}
+
+// [[Rcpp::export]]
+DataFrame computeStabilityRcpp(CharacterVector treeR,
+                               CharacterVector treeSampleR) {
+    //
+    // 1. Build the tree V
+    //
+    if (treeR.size() != 1 || treeR[0] == NA_STRING)
+        stop("treeR must be a single non-NA Newick string.");
+    pTree V = pTree(as<std::string>(treeR[0]));
+
+    //
+    // 2. Build the tree sample
+    //
+    std::vector<pTree> treeSample = buildTreeSample(treeSampleR);
+    int K = static_cast<int>(treeSample.size());
+
+    //
+    // 3. Precompute rhoV = rho(V, Z) for every tree Z in the sample
+    //
+    std::vector<float> rhoV(K);
+    for (int i = 0; i < K; i++)
+        rhoV[i] = static_cast<float>(rho(V, treeSample[i]));
+
+    //
+    // 4. Stability of every leaf and every internal split of V
+    //
+    std::vector<std::string> features;
+    std::vector<std::string> types;
+    std::vector<double>      stabilities;
+
+    for (const std::string& a : V.leafSet) {
+        features.push_back(a);
+        types.push_back("leaf");
+        stabilities.push_back(Stability(treeSample, V, a, rhoV, K));
+    }
+    for (const Split& s : V.intSplits) {
+        features.push_back(s.printSt());
+        types.push_back("split");
+        stabilities.push_back(Stability(treeSample, V, s, rhoV, K));
+    }
+
+    return DataFrame::create(
+        _["feature"]          = features,
+        _["type"]             = types,
+        _["stability"]        = stabilities,
+        _["stringsAsFactors"] = false
+    );
+}
+
+// [[Rcpp::export]]
+DataFrame computeStabilityRcppS(CharacterVector treeR,
+                                CharacterVector treeSampleR,
+                                IntegerVector nSampleR) {
+    //
+    // 1. Build the tree V
+    //
+    if (treeR.size() != 1 || treeR[0] == NA_STRING)
+        stop("treeR must be a single non-NA Newick string.");
+    pTree V = pTree(as<std::string>(treeR[0]));
+
+    //
+    // 2. Build the (summarized) tree sample and its multiplicities
+    //
+    std::vector<pTree> treeSample = buildTreeSample(treeSampleR);
+
+    if (nSampleR.size() != (int)treeSample.size())
+        stop("treeSample and nSample must have the same length.");
+
+    std::vector<int> nSample;
+    nSample.reserve(nSampleR.size());
+    for (int i = 0; i < nSampleR.size(); i++)
+        nSample.push_back(static_cast<int>(nSampleR[i]));
+
+    int N = static_cast<int>(treeSample.size());          // # of unique trees
+    int K = std::accumulate(nSample.begin(), nSample.end(), 0); // total count
+
+    //
+    // 3. Precompute rhoV = rho(V, Z) for every unique tree Z in the sample
+    //
+    std::vector<float> rhoV(N);
+    for (int i = 0; i < N; i++)
+        rhoV[i] = static_cast<float>(rho(V, treeSample[i]));
+
+    //
+    // 4. Stability of every leaf and every internal split of V
+    //
+    std::vector<std::string> features;
+    std::vector<std::string> types;
+    std::vector<double>      stabilities;
+
+    for (const std::string& a : V.leafSet) {
+        features.push_back(a);
+        types.push_back("leaf");
+        stabilities.push_back(Stability(treeSample, nSample, V, a, rhoV, K));
+    }
+    for (const Split& s : V.intSplits) {
+        features.push_back(s.printSt());
+        types.push_back("split");
+        stabilities.push_back(Stability(treeSample, nSample, V, s, rhoV, K));
+    }
+
+    return DataFrame::create(
+        _["feature"]          = features,
+        _["type"]             = types,
+        _["stability"]        = stabilities,
+        _["stringsAsFactors"] = false
+    );
+}
+
 // [[Rcpp::export]]
 CharacterVector stableSearchRcppS(CharacterVector treeSampleR,
                                  IntegerVector nSampleR,

@@ -8,17 +8,17 @@
 #' @param file2 Path to a file containing Newick trees for FDR control Search (optional)
 #' @param n1 Number of trees to be used for Stable Search (optional)
 #' @param random_subsampling Boolean indicating if the subsampling is to be made random
+#' @param summarized Boolean factor indicating if the function is to be runned with a summarized version of the sample
 #' @param SPbuilder String indication what method to use to build subposet.
+#' @param top_width Number of trees of maximal rank for the subposet building
+#' @param bottom_width Number of trees of rank 1 for the subposet building
+#' @param orientation Orientation for the building of the subposet
 #' @param alpha Numeric value passed to Stable Search for stable threshold.
 #' @param q Numeric value passed to FDR control purposes.
 #' @param q0 Numeric value passed to subposet building process when building upwards (optional)
 #' @param tau Extra value for subposet building.
 #' @param Mt Number of maximal trees for basic-bifurcation subposet building
 #' @param rb Anchor rank for basic-bifurcation subposet building
-#' @param top_width Number of trees of maximal rank for the fixed-widths subposet building
-#' @param bottom_width Number of trees of rank 1 for the fixed-widths subposet building
-#' @param orientation Orientation for the fixed-widths subposet building 
-#' @param summarized Boolean factor indicating if the function is to be runned with a summarized version of the sample
 #'
 #' @return Output of completeSearchRcpp
 #' @export
@@ -28,12 +28,12 @@ run_FDRcontrol_search <- function(newicks = NULL, newicks1 = NULL, newicks2 = NU
                                   file = NULL, file1 = NULL, file2 = NULL, 
                                   n1 = NULL,
                                   random_subsampling = FALSE,
-                                  SPbuilder = "stability",
-                                  alpha = 0.85, q = 0.1, q0 = 0.5, tau = 0.80, 
-                                  Mt = 1, rb = NULL,
+                                  summarized = FALSE,
+                                  SPbuilder = "basic_score",
                                   top_width = NULL, bottom_width = 1,
                                   orientation = "upwards",
-                                  summarized = FALSE) {
+                                  alpha = 0.85, q = 0.1, q0 = 0.5, tau = 0.80, 
+                                  Mt = 1, rb = NULL) {
   
   ## --- Argument validation -------------------------------------------------
   
@@ -85,14 +85,13 @@ run_FDRcontrol_search <- function(newicks = NULL, newicks1 = NULL, newicks2 = NU
     }
   }
   
-  if ((SPbuilder != "stability") && (SPbuilder != "basic") && (SPbuilder != "basic_auto") && (SPbuilder != "upwards") && (SPbuilder != "fixed_width")){
+  if ((SPbuilder != "basic_score") && (SPbuilder != "stability") && (SPbuilder != "basic_bifurcation") && (SPbuilder != "basic_auto")){
     stop(
       "The subPoset builder method must be a valid option. It is either:\n",
-      "SPbuilder = 'stability': Building a stable tree first and branching out from there\n",
-      "SPbuilder = 'basic': For basic bifurcation with known number of maximal trees and bifurcation rank level.",
+      "SPbuilder = 'basic_score': For the score-based constructor with upwards or downwards orientation.",
+      "SPbuilder = 'basic_bifurcation': For basic bifurcation with known number of maximal trees and bifurcation rank level.",
       "SPbuilder = 'basic_auto': For basic bifurcation with automatic selection of maximal trees and bifurcation rank level.",
-      "SPbuilder = 'upwards': For upwards bifurcation based on relaxed thresholds.",
-      "SPbuilder = 'fixed_width': For the fixed-width constructor with upwards or downwards orientation."
+      "SPbuilder = 'stability': Building a stable tree first and branching out from there\n"
     )
   }
   
@@ -221,7 +220,7 @@ run_FDRcontrol_search <- function(newicks = NULL, newicks1 = NULL, newicks2 = NU
                           compLeafSetR = completeLeaveSet, 
                           alphaR = alpha, qR = q, tauR = tau)
       
-    } else if (SPbuilder == "basic") {
+    } else if (SPbuilder == "basic_bifurcation") {
       if (is.null(rb)){
         rb = length(completeLeaveSet) - 4;
       }
@@ -249,12 +248,7 @@ run_FDRcontrol_search <- function(newicks = NULL, newicks1 = NULL, newicks2 = NU
                                        treeSample2R = cleaned_newicks2, nSample2R = Count_trees2,
                                        compLeafSetR = completeLeaveSet,
                                        MtR = Mt, rbR = rb, qR = q)
-    } else if (SPbuilder == "upwards") {
-      res <- completeSearchRcppS_V3(treeSample1R = cleaned_newicks1, nSample1R = Count_trees1,
-                                    treeSample2R = cleaned_newicks2, nSample2R = Count_trees2,
-                                    compLeafSetR = completeLeaveSet,
-                                    qR = q, qoR = q0)
-    } else if (SPbuilder == "fixed_width") {
+    } else if (SPbuilder == "basci_score") {
       
         if(is.null(top_width)){
           top_width = floor((2*length(completeLeaveSet) - 7)/2)
@@ -293,7 +287,7 @@ run_FDRcontrol_search <- function(newicks = NULL, newicks1 = NULL, newicks2 = NU
                                  compLeafSetR = completeLeaveSet, 
                                  alphaR = alpha, qR = q, tauR = tau)
       
-    } else if (SPbuilder == "basic") {
+    } else if (SPbuilder == "basic_bifurcation") {
       if (is.null(rb)){
         rb = length(completeLeaveSet) - 4;
       }

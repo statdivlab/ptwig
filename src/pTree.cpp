@@ -364,6 +364,23 @@ pTree pTree::TDR(set<string> L){
     return pTree(leafIntersection, newSplits);
 }
 
+pTree pTree::TDR(set<string> L) const {
+    set<string> leafIntersection;
+    set_intersection(leafSet.begin(), leafSet.end(),
+                     L.begin(), L.end(),
+                     inserter(leafIntersection, leafIntersection.begin()));
+
+    set<Split> newSplits;
+    for (Split sp1 : intSplits){
+        Split nwSp1 = sp1.TDR(L);
+        if (nwSp1.isInternal()){
+            newSplits.insert(nwSp1);
+        }
+    }
+
+    return pTree(leafIntersection, newSplits);
+}
+
 pTree pTree::Remove(Split s){
     set<Split> Copy = intSplits;
     Copy.erase(s);
@@ -494,7 +511,7 @@ bool pTree::covers(pTree tOther) const {
     return false;
 }
 
-pTree commonLower(pTree T1, pTree T2, set<string> sLeaves){
+pTree commonLower(const pTree& T1, const pTree& T2, const set<string>& sLeaves){
     pTree R1 = T1.TDR(sLeaves);
     pTree R2 = T2.TDR(sLeaves);
     

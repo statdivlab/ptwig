@@ -81,6 +81,14 @@ stableSearchRcpp <- function(treeSampleR, compLeafSetR, alphaR) {
     .Call(`_ptwig_stableSearchRcpp`, treeSampleR, compLeafSetR, alphaR)
 }
 
+computeStabilityRcpp <- function(treeR, treeSampleR) {
+    .Call(`_ptwig_computeStabilityRcpp`, treeR, treeSampleR)
+}
+
+computeStabilityRcppS <- function(treeR, treeSampleR, nSampleR) {
+    .Call(`_ptwig_computeStabilityRcppS`, treeR, treeSampleR, nSampleR)
+}
+
 stableSearchRcppS <- function(treeSampleR, nSampleR, compLeafSetR, alphaR) {
     .Call(`_ptwig_stableSearchRcppS`, treeSampleR, nSampleR, compLeafSetR, alphaR)
 }
