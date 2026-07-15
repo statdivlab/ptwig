@@ -5,7 +5,6 @@
 #' @param Mt Numeric value representing number of maximal trees in subPoset
 #' @param rb rank at which bifurcation in subposet starts
 #' @param tau Extra value for subposet building.
-#' @param summarized Boolean factor indicating if the function is to be runned with a summarized version of the sample
 #'
 #' @return Output of computeNewSubposet
 #' @export
@@ -61,7 +60,7 @@ run_NewSubposet <- function(newicks = NULL, file = NULL, Mt, rb) {
   completeLeaveSet <- unique(unlist(lapply(c(trees), function(x) x$tip.label)))
   
   ## --- Preparing to run the final function -----------------------------------
-    ## --- Joining trees that are identical if summarized = TRUE --------------
+    ## --- Joining trees that are identical -----------------------------------
     Unique_trees = list()
     Count_trees = c()
     

@@ -12,7 +12,6 @@
 class spNode{
     public:
         pTree Tree;
-        int kappa;
         float zeta;
     
         int next;
@@ -30,7 +29,6 @@ class spNode{
     
     void setNext(int newNext);
     
-    void setKappa(int newKappa);
     
     void setZeta (float newZ);
     
@@ -49,15 +47,12 @@ class subPoset{
     
         int Msize;
     
-    subPoset(std::vector<pTree> initT, std::vector<pTree> Sample, std::set<std::string> compLeafSet, int rb);
     
     subPoset(std::vector<pTree> initT, std::vector<pTree> Sample, std::vector<int> nSample, std::set<std::string> compLeafSet, int rb);
     
     subPoset(std::vector<pTree> Sample, std::vector<int> nSample, std::set<std::string> compLeafSet, int Mt, int rb);
     
-    subPoset(std::vector<pTree> Sample, std::set<std::string> compLeafSet, int Mt, int rb);
     
-    subPoset(std::vector<pTree> Sample, std::vector<int> nSample, std::set<std::string> compLeafSet, int Mt, int rb, bool Constructive);
     
     subPoset(std::vector<pTree> Sample, std::vector<int> nSample, std::set<std::string> compLeafSet, float q);
 

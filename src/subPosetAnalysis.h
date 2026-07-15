@@ -19,8 +19,6 @@ struct subPosetOutput {
     std::vector<float>       AddedNotNullProbs; //Estimated value for lower probs
     float     RademacherComplex; // Estimated bound for the Rademacher Complexity 
     float     RademacherComplex2;
-    std::vector<float>  kappa_Ts_05;
-    std::vector<float>  kappa_Ts_p;
     std::vector<float>  rad_Ts_05;
     std::vector<float>  rad_Ts_p;
 };

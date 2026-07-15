@@ -6,6 +6,6 @@ Date: 2025-12-13
 Authors@R: person("Maria","Valdez Cabrera", role = c("aut", "cre"), email = "mariavc@uw.edu")
 Description: This package performs consensus tree construction from a tree Sample, with stability and False Discovery Rate guarantees.
 License: GPL (>= 2)
-Imports: Rcpp (>= 1.1.0)
+Imports: Rcpp (>= 1.1.0), ape
 LinkingTo: Rcpp, rcpptimer
-RoxygenNote: 7.3.3
+Config/roxygen2/version: 8.0.0

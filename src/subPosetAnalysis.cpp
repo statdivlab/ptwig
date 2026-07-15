@@ -26,20 +26,6 @@
 using namespace Rcpp;
 using namespace std;
 
-float kappa_threshold(float omegaT, float q, int N, int kappa){
-    //cout << "kappa" << kappa << "\n";
-    //cout << "log kappa" << log(kappa) << "\n";
-    //cout << "log omegaT" << log(omegaT) << "\n";
-    //cout << "log q" << log(q) << "\n";
-    float prelim = log(kappa) + log(omegaT) - log(q);
-    //cout << "Prelim is " << prelim << "\n"; 
-    float thrs1 = std::max(prelim/(2*N), 0.0f);
-    
-    //cout << "Thrs1 " << thrs1 << "\n"; 
-    
-    return(sqrt(thrs1));
-    
-}
 
 float rad_threshold(float omegaT, float q, int N, float Rad, float delta){
     float Udelta = 2*Rad + 2*sqrt((log(2) - log(delta))/(2*N));
@@ -332,11 +318,8 @@ result.RademacherComplex2 = static_cast<float>(bestScore);
     float addedEta = std::min(0.95f, 1 - result.nullCoveringProb);
     
     while (curIndx > -1){
-        float kappa_t = kappa_threshold(1, q, B, SP.Poset.at(curIndx).kappa);
         float rad_t = rad_threshold(1, q, B, result.RademacherComplex2, delta);
         
-        result.kappa_Ts_05.push_back(0.5f + kappa_t);
-        result.kappa_Ts_p.push_back(addedEta + kappa_t);
         result.rad_Ts_05.push_back(0.5f + rad_t);
         result.rad_Ts_p.push_back(addedEta + rad_t);
         
@@ -348,11 +331,8 @@ result.RademacherComplex2 = static_cast<float>(bestScore);
         for (int j : SP.Poset.at(i).over){
             float omegaTemp =  static_cast<float>(rmax - SP.Poset.at(j).Tree.rank + 1)/(static_cast<float>(rmax));
             
-            float kappa_t = kappa_threshold(omegaTemp, q, B, SP.Poset.at(j).kappa);
             float rad_t = rad_threshold(omegaTemp, q, B, result.RademacherComplex2, delta);
         
-            result.kappa_Ts_05.push_back(0.5f + kappa_t);
-            result.kappa_Ts_p.push_back(addedEta + kappa_t);
             result.rad_Ts_05.push_back(0.5f + rad_t);
             result.rad_Ts_p.push_back(addedEta + rad_t);
         }
@@ -657,11 +637,8 @@ result.RademacherComplex2 = static_cast<float>(bestScore);
     float addedEta = std::min(0.95f, 1 - result.nullCoveringProb);
     
     while (curIndx > -1){
-        float kappa_t = kappa_threshold(1, q, B, SP.Poset.at(curIndx).kappa);
         float rad_t = rad_threshold(1, q, B, result.RademacherComplex2, delta);
         
-        result.kappa_Ts_05.push_back(0.5f + kappa_t);
-        result.kappa_Ts_p.push_back(addedEta + kappa_t);
         result.rad_Ts_05.push_back(0.5f + rad_t);
         result.rad_Ts_p.push_back(addedEta + rad_t);
         
@@ -673,11 +650,8 @@ result.RademacherComplex2 = static_cast<float>(bestScore);
         for (int j : SP.Poset.at(i).over){
             float omegaTemp =  static_cast<float>(rmax - SP.Poset.at(j).Tree.rank + 1)/(static_cast<float>(rmax));
             
-            float kappa_t = kappa_threshold(omegaTemp, q, B, SP.Poset.at(j).kappa);
             float rad_t = rad_threshold(omegaTemp, q, B, result.RademacherComplex2, delta);
         
-            result.kappa_Ts_05.push_back(0.5f + kappa_t);
-            result.kappa_Ts_p.push_back(addedEta + kappa_t);
             result.rad_Ts_05.push_back(0.5f + rad_t);
             result.rad_Ts_p.push_back(addedEta + rad_t);
         }

@@ -30,7 +30,6 @@ using namespace std;
 spNode::spNode(pTree eTree){
     Tree = eTree;
     next = -1;
-    kappa = -1;
     zeta = 0;
 }
 
@@ -46,16 +45,12 @@ void spNode::setNext(int newNext){
     next = newNext;
 }
 
-void spNode::setKappa(int newKappa){
-    kappa = newKappa;
-}
-
 void spNode::setZeta(float newZ){
     zeta = newZ;
 }
 
 void spNode::print(){
-    cout << "This node with kappa " + to_string(kappa) + " has tree \n"<< std::flush;
+    cout << "This node has tree \n"<< std::flush;
     cout << "This node has zeta " << zeta << "\n" << std::flush;
     cout << mPhylo(Tree).toNewick() << "\n" << std::flush;
     cout << "\n parents: [";
@@ -78,7 +73,7 @@ void spNode::print(){
 }
 
 void spNode::printRd(){
-    cout << "This node with kappa " + to_string(kappa) + " \n"<< std::flush;
+    cout << "This node \n"<< std::flush;
     cout << "\n parents: [";
     for (int i : over){
         cout << to_string(i) << ", ";
@@ -92,283 +87,6 @@ void spNode::printRd(){
     cout << "Next: "<< to_string(next) << " \n"<< std::flush;
 }
     
-subPoset::subPoset(vector<pTree> initT, vector<pTree> Sample, set<string> compLeafSet, int rb){
-    int rmax = 2*static_cast<int> (compLeafSet.size()) - 7;
-    firstRank = std::vector<int>(rmax+1, -1);
-    lastRank = std::vector<int>(rmax+1, -1);
-
-    Poset.push_back(spNode(initT.at(0)));
-    //c out << "Subposet node " << 0 << " added \n"<< std::flush;
-    firstRank.at(initT.at(0).rank) = 0;
-    lastRank.at(initT.at(0).rank) = 0;
-
-    int initRank = initT.at(0).rank;
-    
-    Msize = 0;
-    
-    if (initRank == rmax){
-        Msize = static_cast<int>(initT.size());
-    }
-
-    for (int i = 1; i < initT.size(); i++){
-        Poset.at(lastRank.at(initRank)).setNext(i);
-        lastRank.at(initRank) = i;
-        Poset.push_back(spNode(initT.at(i)));
-        //c out << "Subposet node " << i << " added \n"<< std::flush;
-    }
-
-    //Creating things above the initial trees.
-    //c out << "Creating things above initial trees in SubPoset \n"<< std::flush;
-    int curRank = initRank;
-    int B = static_cast<int>(Sample.size());
-    int curIndx = 0;
-
-
-    if (initRank < rmax){
-        firstRank.at(curRank + 1) = -1;
-        lastRank.at(curRank + 1) = -1;
-    }
-    
-    int nodesCount = (int)initT.size();
-    
-    while(curRank < rmax){
-        //c out << "Entering the cycle for potential node " << nodesCount << "\n"<< std::flush;
-        pTree U = Poset.at(curIndx).Tree;
-        vector<pTree> AllV = coverTrees(U, compLeafSet);
-
-        auto rd = std::random_device {};
-        auto rng = std::default_random_engine { rd() };
-        shuffle(begin(AllV), std::end(AllV), rng);
-        
-        // Precompute rho(U, Z) for all sample trees once
-        //c out << "Computing rho for U\n"<< std::flush;
-        vector<double> rhoU(Sample.size());
-        for (int i = 0; i < Sample.size(); i++){
-            rhoU[i] = rho(U, Sample[i]);
-        }
-        
-        //Version where maximal value is found.
-
-        int IndexMaxS = -1;
-        int IndexMaxL = -1;
-        int IndexMax  = -1;
-        float MaxValueS = 0;
-        float MaxValueL = 0;
-        //float MaxValue  = 0;
-        int indx = 0;
-        //c out << "About to search through candidates for V \n"<< std::flush;
-        for (pTree V : AllV){
-            double tempSum = 0;
-            for (int i = 0; i < Sample.size(); i++){
-                // rho(U, Z) is already cached; only rho(V, Z) is computed fresh
-                if ((rho(V, Sample[i]) - rhoU[i]) > 0){
-                    tempSum++;
-                }
-            }
-            if ((V.leafSet.size() > U.leafSet.size()) && (V.leafSet.size()>4)){
-                if ((tempSum/B) > MaxValueL){
-                    MaxValueL = tempSum/B;
-                    IndexMaxL = indx;
-                }
-            } else {
-                if ((tempSum/B) > MaxValueS){
-                    MaxValueS = tempSum/B;
-                    IndexMaxS = indx;
-                }
-            }
-            indx++;
-        }
-        if (MaxValueL > MaxValueS){
-            //MaxValue = MaxValueL;
-            IndexMax = IndexMaxL;
-        } else {
-            //MaxValue = MaxValueS;
-            IndexMax = IndexMaxS;
-        }
-
-        pTree V = AllV.at(IndexMax);
-
-        Poset.push_back(spNode(V));
-        //c out << "Subposet node " << nodesCount << " added \n"<< std::flush;
-        nodesCount++;
-
-        if (V.rank == rmax){
-            Msize++;
-        }
-
-        int runIndx = firstRank.at(curRank);
-
-        while (runIndx > -1){
-            if (V.covers(Poset.at(runIndx).Tree)){
-                Poset.back().addChild(runIndx);
-                Poset.at(runIndx).addParent(static_cast<int> (Poset.size()) - 1);
-            }
-            runIndx = Poset.at(runIndx).next;
-        }
-
-        if (firstRank.at(curRank+1) == -1){
-            firstRank.at(curRank+1) = static_cast<int> (Poset.size()) - 1;
-        }
-
-        if (lastRank.at(curRank+1) > -1){
-            Poset.at(lastRank.at(curRank+1)).next = static_cast<int> (Poset.size()) - 1;
-        }
-
-        lastRank.at(curRank+1) = static_cast<int> (Poset.size()) - 1;
-
-        curIndx = Poset.at(curIndx).next;
-        while(curIndx > -1){
-            if (!Poset.at(curIndx).over.empty()){
-                curIndx = Poset.at(curIndx).next;
-            } else {
-                break;
-            }
-        }
-
-        if (curIndx == -1){
-            curRank++;
-            curIndx = firstRank.at(curRank);
-        }
-    }
-
-    //Constructing below
-    //c out << "We are constructing subposet below initial trees \n"<< std::flush;
-    curRank = initRank;
-    curIndx = firstRank.at(curRank);
-
-    if(curRank > 1){
-        firstRank.at(curRank - 1) = -1;
-        lastRank.at(curRank - 1) = -1;
-    }
-    //int Counter2 = 0;
-    while (curRank > 1) {
-        pTree V = Poset.at(curIndx).Tree;
-
-        int toAdd = 0;
-
-        if (V.rank > rb){
-            toAdd = 1 - static_cast<int> (Poset.at(curIndx).under.size());
-        } else {
-            toAdd = 2 - static_cast<int> (Poset.at(curIndx).under.size());
-        }
-        
-        //c out << "We are adding extra " << toAdd << " nodes \n"<< std::flush;
-        if (toAdd > 0){
-            // Precompute rho(V, T) for all sample trees once per node
-            //c out << "Precomputing rhos for V \n"<< std::flush;
-            vector<double> rhoV(Sample.size());
-            for (int i = 0; i < Sample.size(); i++){
-                rhoV[i] = rho(V, Sample[i]);
-            }
-
-            // Unified candidate scoring: collect (stb, U) pairs for all candidates
-            // then pick the 1 or 2 with lowest stb not already in under.
-            float min1 = 1.2, min2 = 1.2;
-            bool addU1 = false, addU2 = false;
-            pTree U1, U2;
-
-            auto considerCandidate = [&](pTree U){
-                if (U.rank < V.rank - 1) return;
-
-                for (int k1 : Poset.at(curIndx).under){
-                    if (U == Poset.at(k1).Tree) return;
-                }
-
-                float Sum = 0;
-                for (int i = 0; i < Sample.size(); i++){
-                    // rho(V, T) is cached; only rho(U, T) is computed fresh
-                    if (rhoV[i] > rho(U, Sample[i])){
-                        Sum++;
-                    }
-                }
-                float stb = Sum / B;
-
-                if (stb < min1){
-                    min2 = min1; U2 = U1; if (addU1) addU2 = true;
-                    min1 = stb;  U1 = U;  addU1 = true;
-                } else if (stb < min2){
-                    min2 = stb; U2 = U; addU2 = true;
-                }
-            };
-            
-            //c out << "Evaluating candidates to add below V \n"<< std::flush;
-            for (string a : V.leafSet)    considerCandidate(V.Remove(a));
-            for (Split s : V.intSplits)   considerCandidate(V.Remove(s));
-
-            // Helper lambda to insert a new node at curRank-1
-            auto insertNode = [&](pTree Unew){
-                Poset.push_back(spNode(Unew));
-                //c out << "Subposet node " << nodesCount << " added \n"<< std::flush;
-                nodesCount++;
-
-                int runIndx = firstRank.at(curRank);
-                while (runIndx > -1){
-                    if (Poset.at(runIndx).Tree.covers(Unew)){
-                        Poset.back().addParent(runIndx);
-                        Poset.at(runIndx).addChild(static_cast<int>(Poset.size()) - 1);
-                    }
-                    runIndx = Poset.at(runIndx).next;
-                }
-
-                if (firstRank.at(curRank-1) == -1){
-                    firstRank.at(curRank-1) = static_cast<int>(Poset.size()) - 1;
-                }
-                if (lastRank.at(curRank-1) > -1){
-                    Poset.at(lastRank.at(curRank-1)).next = static_cast<int>(Poset.size()) - 1;
-                }
-                lastRank.at(curRank-1) = static_cast<int>(Poset.size()) - 1;
-            };
-
-            if (addU1) insertNode(U1);
-            if (toAdd == 2 && addU2) insertNode(U2);
-        }
-        
-        //Counter2++;
-        //c out << "End of cycle below number " << Counter2 << "\n"<< std::flush;
-
-        curIndx = Poset.at(curIndx).next;
-
-        if (curIndx == -1){
-            curRank--;
-            curIndx = firstRank.at(curRank);
-        }
-    }
-    
-    //Assigning kappa to upper trees.
-    //c out << "Assigning kappas \n"<< std::flush;
-    curIndx = firstRank.at(rmax);
-    while(curIndx > -1){
-        Poset.at(curIndx).setKappa(Msize*(static_cast<int>(Poset.at(curIndx).under.size())));
-        curIndx = Poset.at(curIndx).next;
-    }
-
-    for (int j = rmax - 1; j > 0; j--){
-        curIndx = firstRank.at(j);
-        while(curIndx > -1){
-            int kap = -1;
-            for (int k : Poset.at(curIndx).over){
-                if (kap < Poset.at(k).kappa){
-                    kap = Poset.at(k).kappa;
-                }
-            }
-            Poset.at(curIndx).setKappa(kap*(static_cast<int>(Poset.at(curIndx).under.size())));
-            curIndx = Poset.at(curIndx).next;
-        }
-    }
-    
-    curIndx = firstRank.at(1);
-
-    while(curIndx > -1){
-        int kap = -1;
-        for (int k : Poset.at(curIndx).over){
-            if (kap < Poset.at(k).kappa){
-                kap = Poset.at(k).kappa;
-            }
-        }
-        Poset.at(curIndx).setKappa(kap);
-        curIndx = Poset.at(curIndx).next;
-    }
-}
 
 subPoset::subPoset(vector<pTree> initT, vector<pTree> Sample, vector<int> nSample, set<string> compLeafSet, int rb){
     int rmax = 2*static_cast<int> (compLeafSet.size()) - 7;
@@ -376,7 +94,6 @@ subPoset::subPoset(vector<pTree> initT, vector<pTree> Sample, vector<int> nSampl
     lastRank = std::vector<int>(rmax+1, -1);
     
     Poset.push_back(spNode(initT.at(0)));
-    //c out << "Subposet node " << 0 << " added \n"<< std::flush;
     
     firstRank.at(initT.at(0).rank) = 0;
     lastRank.at(initT.at(0).rank) = 0;
@@ -394,11 +111,9 @@ subPoset::subPoset(vector<pTree> initT, vector<pTree> Sample, vector<int> nSampl
         Poset.at(lastRank.at(initRank)).setNext(i);
         lastRank.at(initRank) = i;
         Poset.push_back(spNode(initT.at(i)));
-        //c out << "Subposet node " << i  << " added \n"<< std::flush;
     }
 
     //Creating things above the initial trees.
-    //c out << "Creating things above initial trees in SubPoset \n"<< std::flush;
 
     int curRank = initRank;
     int B = std::accumulate(nSample.begin(), nSample.end(), 0);
@@ -412,7 +127,6 @@ subPoset::subPoset(vector<pTree> initT, vector<pTree> Sample, vector<int> nSampl
     
     int nodesCount = (int)initT.size();
     while(curRank < rmax){
-        //c out << "Entering the cycle for potential node " << nodesCount << "\n"<< std::flush;
         pTree U = Poset.at(curIndx).Tree;
         vector<pTree> AllV = coverTrees(U, compLeafSet);
 
@@ -421,7 +135,6 @@ subPoset::subPoset(vector<pTree> initT, vector<pTree> Sample, vector<int> nSampl
         shuffle(begin(AllV), std::end(AllV), rng);
         
         // Precompute rho(U, Z) for all sample trees once
-        //c out << "Computing rho for U\n"<< std::flush;
         vector<double> rhoU(Sample.size());
         for (int i = 0; i < Sample.size(); i++){
             rhoU[i] = rho(U, Sample[i]);
@@ -436,7 +149,6 @@ subPoset::subPoset(vector<pTree> initT, vector<pTree> Sample, vector<int> nSampl
         float MaxValueL = 0;
         //float MaxValue  = 0;
         int indx = 0;
-        //c out << "About to search through candidates for V \n"<< std::flush;
         for (pTree V : AllV){
             double tempSum = 0;
             for (int i = 0; i < Sample.size(); i++){
@@ -469,7 +181,6 @@ subPoset::subPoset(vector<pTree> initT, vector<pTree> Sample, vector<int> nSampl
         pTree V = AllV.at(IndexMax);
 
         Poset.push_back(spNode(V));
-        //c out << "Subposet node " << nodesCount << " added \n"<< std::flush;
         nodesCount++;
 
         if (V.rank == rmax){
@@ -512,7 +223,6 @@ subPoset::subPoset(vector<pTree> initT, vector<pTree> Sample, vector<int> nSampl
     }
 
     //Constructing below
-    //c out << "We are constructing subposet below initial trees \n"<< std::flush;
     curRank = initRank;
     curIndx = firstRank.at(curRank);
 
@@ -533,10 +243,8 @@ subPoset::subPoset(vector<pTree> initT, vector<pTree> Sample, vector<int> nSampl
             toAdd = 2 - static_cast<int> (Poset.at(curIndx).under.size());
         }
         
-        //c out << "We are adding extra " << toAdd << " nodes \n"<< std::flush;
         if (toAdd > 0){
             // Precompute rho(V, T) for all sample trees once per node
-            //c out << "Precomputing rhos for V \n"<< std::flush;
             vector<double> rhoV(Sample.size());
             for (int i = 0; i < Sample.size(); i++){
                 rhoV[i] = rho(V, Sample[i]);
@@ -570,14 +278,12 @@ subPoset::subPoset(vector<pTree> initT, vector<pTree> Sample, vector<int> nSampl
                 }
             };
             
-            //c out << "Evaluating candidates to add below V \n"<< std::flush;
             for (string a : V.leafSet)    considerCandidate(V.Remove(a));
             for (Split s : V.intSplits)   considerCandidate(V.Remove(s));
             
             // Helper lambda to insert a new node at curRank-1
             auto insertNode = [&](pTree Unew){
                 Poset.push_back(spNode(Unew));
-                //c out << "Subposet node " << nodesCount << " added \n"<< std::flush;
                 nodesCount++;
 
                 int runIndx = firstRank.at(curRank);
@@ -604,7 +310,6 @@ subPoset::subPoset(vector<pTree> initT, vector<pTree> Sample, vector<int> nSampl
         }
         
         //Counter2++;
-        //c out << "End of cycle below number " << Counter2 << "\n"<< std::flush;
         
         curIndx = Poset.at(curIndx).next;
 
@@ -614,380 +319,34 @@ subPoset::subPoset(vector<pTree> initT, vector<pTree> Sample, vector<int> nSampl
         }
     }
     
-    //Assigning kappa to upper trees.
-    //c out << "Assigning kappas \n"<< std::flush;
-    curIndx = firstRank.at(rmax);
-    while(curIndx > -1){
-        Poset.at(curIndx).setKappa(Msize*(static_cast<int>(Poset.at(curIndx).under.size())));
-        curIndx = Poset.at(curIndx).next;
-    }
+    // Zeta pass: for each node, zeta is the mean over its covers of the fraction
+    // of (weighted) treeSample1 trees whose rho strictly increases. This matches
+    // the definition the fixed-width / basic_score constructor uses.
+    for (int idx = 0; idx < static_cast<int>(Poset.size()); idx++){
+        pTree Ta = Poset.at(idx).Tree;
 
-    for (int j = rmax - 1; j > 0; j--){
-        curIndx = firstRank.at(j);
-        while(curIndx > -1){
-            int kap = -1;
-            for (int k : Poset.at(curIndx).over){
-                if (kap < Poset.at(k).kappa){
-                    kap = Poset.at(k).kappa;
+        vector<double> rhoTa(Sample.size());
+        for (int i = 0; i < static_cast<int>(Sample.size()); i++){
+            rhoTa[i] = rho(Ta, Sample[i]);
+        }
+
+        vector<pTree> covers = coverTrees(Ta, compLeafSet);
+        float zSum = 0.0f;
+        int zCnt = 0;
+        for (const pTree& Tb : covers){
+            double improving = 0;
+            for (int i = 0; i < static_cast<int>(Sample.size()); i++){
+                if (rho(Tb, Sample[i]) > rhoTa[i]){
+                    improving += nSample[i];
                 }
             }
-            Poset.at(curIndx).setKappa(kap*(static_cast<int>(Poset.at(curIndx).under.size())));
-            curIndx = Poset.at(curIndx).next;
+            zSum += static_cast<float>(improving / B);
+            zCnt++;
         }
-    }
-
-    curIndx = firstRank.at(1);
-
-    while(curIndx > -1){
-        int kap = -1;
-        for (int k : Poset.at(curIndx).over){
-            if (kap < Poset.at(k).kappa){
-                kap = Poset.at(k).kappa;
-            }
-        }
-        Poset.at(curIndx).setKappa(kap);
-        curIndx = Poset.at(curIndx).next;
+        Poset.at(idx).setZeta(zCnt > 0 ? zSum / zCnt : 0.0f);
     }
 }
 
-subPoset::subPoset(vector<pTree> Sample, set<string> compLeafSet, int Mt, int rb) {
-
-    int B      = static_cast<int>(Sample.size());
-    int maxRnk = 2 * static_cast<int>(compLeafSet.size()) - 7;
-
-    firstRank.assign(2 * static_cast<int>(compLeafSet.size()) - 6, -1);
-    lastRank.assign(2 * static_cast<int>(compLeafSet.size()) - 6, -1);
-
-    // ---------------------------------------------------------------
-    // Shared helpers
-    // ---------------------------------------------------------------
-    
-    struct BeamEntry {
-        pTree          tree;
-        vector<oRho>  rhoVec;
-    };
-
-    
-    struct Candidate { 
-        pTree tree; 
-        vector<oRho> rhoVec; 
-        float score; };
-
-    // Score of V relative to a cached rho baseline
-    auto computeScore = [&](const vector<oRho>& rhoBase,
-                            const vector<oRho>& rhoV) -> float {
-        float sum = 0;
-        for (int i = 0; i < B; i++)
-            if (rhoV[i].rho - rhoBase[i].rho > 0)
-                sum++;
-        return sum / B;
-    };
-
-    // Compute and return rho(T, Sample[i]) for all i
-    auto buildRhoVec = [&](const pTree& T, const pTree& TB, const vector<oRho>& rhoBase) -> vector<oRho> {
-        vector<oRho> rv(B);
-        for (int i = 0; i < B; i++)
-            rv[i] = rho(T, TB, rhoBase[i], Sample[i]);
-        return rv;
-    };
-    
-    auto buildRhoVecL = [&](const pTree& T, const pTree& TB, const vector<oRho>& rhoBase, const string& a) -> vector<oRho> {
-        vector<oRho> rv(B);
-        for (int i = 0; i < B; i++)
-            rv[i] = rho(T, TB, rhoBase[i], Sample[i], a);
-        return rv;
-    };
-    
-    auto buildRhoVecS = [&](const pTree& T, const pTree& TB, const vector<oRho>& rhoBase, const Split& s) -> vector<oRho> {
-        vector<oRho> rv(B);
-        for (int i = 0; i < B; i++)
-            rv[i] = rho(T, TB, rhoBase[i], Sample[i], s);
-        return rv;
-    };
-
-
-    auto toNwk = [&](const pTree& T) -> string {
-        mPhylo mp = mPhylo(T);
-        return mp.toNewick();
-    };
- 
-    // ---------------------------------------------------------------
-    // PHASE 1: Beam search upward with beam width Mt
-    // ---------------------------------------------------------------
-    
-    vector<BeamEntry> currentLevel;
-
-    // --- Seed: find best Mt trees directly above the empty tree ---
-    {
-        pTree emptyTree  = pTree("();");
-        vector<set<string>> emptyLeaves;
-        oRho curORho = oRho(0,emptyLeaves);
-        vector<oRho> rhoEmpty(B, curORho);
-        vector<pTree> above    = coverTrees(emptyTree, compLeafSet);
-
-        vector<Candidate> candidates;
-        candidates.reserve(above.size());
-        
-        //c out << "Computing rhos for the first level in the poset \n"<< std::flush;
-        for (const pTree& V : above) {
-            vector<oRho> rv = buildRhoVec(V, emptyTree, rhoEmpty);
-            float sc = computeScore(rhoEmpty, rv);
-            candidates.push_back({V, rv, sc});
-        }
-
-        sort(candidates.begin(), candidates.end(),
-             [](const Candidate& a, const Candidate& b){
-                 return a.score > b.score; });
-
-        int take = min(Mt, (int)candidates.size());
-        for (int i = 0; i < take; i++)
-            currentLevel.push_back({candidates[i].tree, candidates[i].rhoVec});
-    }
-
-    // --- Beam search: ascend rank by rank until maxRnk ---
-    //c out << "We start searching upwards for best trees at max rank \n"<< std::flush;
-    //int counter1 = 0;
-    while ((int)currentLevel[0].tree.rank < maxRnk) {
-        //counter1++;
-        //c out << "Going up for a " << counter1 << "time \n"<< std::flush; 
-        set<string>    seenNewick;
-        vector<BeamEntry> futureLevel;
-        futureLevel.reserve(Mt);
-        
-        vector<vector<Candidate>> aboveCurrents;
-        
-        // Step A: from each beam entry, compute aboves and order by scores
-        //int counterEntry = 0;
-        for (const BeamEntry& entry : currentLevel) {
-            vector<pTree> above = coverTrees(entry.tree, compLeafSet);
-            
-            vector<Candidate> aboveOne;
-            //c out << "Computing rhos for above trees of entry "<< counterEntry << " \n"<< std::flush;
-            //counterEntry++;
-            for (const pTree& V : above) {
-                 vector<oRho> rv = buildRhoVec(V, entry.tree, entry.rhoVec);
-                float sc = computeScore(entry.rhoVec, rv);
-                
-                aboveOne.push_back({V, rv, sc});
-            }
-            
-            sort(aboveOne.begin(), aboveOne.end(),
-             [](const Candidate& a, const Candidate& b){
-                 return a.score > b.score; });
-            
-            aboveCurrents.push_back(aboveOne);
-
-            
-        }
-        
-        
-        // Step B: Fill up with aboves, avoiding repetitions. We have a running indexes for each
-        //c out << "Fillin the next level with best candidates \n"<< std::flush;
-        vector<int> tryIndx;
-        
-        tryIndx.assign(Mt, 0);
-        
-        int currentIndex = 0;
-
-        while(((int)futureLevel.size() < Mt) && (accumulate(tryIndx.begin(), tryIndx.end(), 0) > -(int)currentLevel.size())){
-            
-            if ((tryIndx.at(currentIndex) == -1) || (tryIndx.at(currentIndex) >= aboveCurrents[currentIndex].size())){
-                tryIndx.at(currentIndex) = -1;
-                continue;
-            }
-            Candidate canU = aboveCurrents[currentIndex][tryIndx.at(currentIndex)];
-            
-            string nwk = toNwk(canU.tree);
-            if (!seenNewick.count(nwk)){
-                futureLevel.push_back({canU.tree, canU.rhoVec});
-                seenNewick.insert(nwk);
-            }
-            tryIndx.at(currentIndex)++;
-            currentIndex = (currentIndex + 1) % ((int)currentLevel.size());
-        }
-        
-        currentLevel = std::move(futureLevel);
-    }
-
-    // ---------------------------------------------------------------
-    // PHASE 2: Insert top Mt trees into the poset at maxRnk,
-    //          seeding rhoCache directly from Phase 1 results
-    // ---------------------------------------------------------------
-
-    vector<vector<oRho>> rhoCache;
-    rhoCache.reserve(Mt);
-    int nodesCount = 0;
-    for (int m = 0; m < (int)currentLevel.size(); m++) {
-        Poset.push_back(spNode(currentLevel[m].tree));
-        //c out << "Subposet node " << nodesCount << " added \n"<< std::flush;
-        nodesCount++;
-        rhoCache.push_back(currentLevel[m].rhoVec);   // no recomputation
-
-        if (m < (int)currentLevel.size() - 1)
-            Poset[m].setNext(m + 1);
-        // last node: next stays -1 from spNode constructor
-
-        // Maximal nodes: kappa placeholder — corrected in Phase 3 kappa pass
-        Poset[m].setKappa(Mt);
-    }
-
-    firstRank[maxRnk] = 0;
-    lastRank[maxRnk] = (int)currentLevel.size() - 1;
-    
-
-    // ---------------------------------------------------------------
-    // PHASE 3: Build downward iteratively, rank by rank
-    // ---------------------------------------------------------------
-
-    // Helper: insert a child U into the poset at curRank-1,
-    //         wiring all parent edges from curRank
-    auto insertChild = [&](const pTree& U, const vector<oRho>& rhoU,
-                           int curRank) {
-
-        // Check if U already exists at curRank-1
-        int existIdx = -1;
-        int runIndx  = firstRank[curRank - 1];
-        while (runIndx > -1) {
-            if (Poset[runIndx].Tree == U) {
-                existIdx = runIndx;
-                break;
-            }
-            runIndx = Poset[runIndx].next;
-        }
-
-        int childIdx;
-        if (existIdx > -1) {
-            childIdx = existIdx;
-        } else {
-            Poset.push_back(spNode(U));
-            //c out << "Subposet node " << nodesCount << " added \n"<< std::flush;
-            nodesCount++;
-            childIdx = (int)Poset.size() - 1;
-            rhoCache.push_back(rhoU);
-
-            if (firstRank[curRank - 1] == -1)
-                firstRank[curRank - 1] = childIdx;
-            if (lastRank[curRank - 1] > -1)
-                Poset[lastRank[curRank - 1]].setNext(childIdx);
-            lastRank[curRank - 1] = childIdx;
-        }
-
-        // Wire parent edges: scan all nodes at curRank
-        runIndx = firstRank[curRank];
-        while (runIndx > -1) {
-            if (Poset[runIndx].Tree.covers(U)) {
-                bool alreadyLinked = false;
-                for (int k : Poset[childIdx].over)
-                    if (k == runIndx) { alreadyLinked = true; break; }
-                if (!alreadyLinked) {
-                    Poset[childIdx].addParent(runIndx);
-                    Poset[runIndx].addChild(childIdx);
-                }
-            }
-            runIndx = Poset[runIndx].next;
-        }
-    };
-    int curRank = maxRnk;
-    int curIndx = firstRank[curRank];
-
-    if (curRank > 1) {
-        firstRank[curRank - 1] = -1;
-        lastRank[curRank - 1] = -1;
-    }
-    while (curRank > 1) {
-
-        pTree          V    = Poset[curIndx].Tree;
-        vector<oRho>  rhoV = rhoCache[curIndx];
-
-        int toAdd = (V.rank > rb ? 1 : 2)
-                    - (int)Poset[curIndx].under.size();
-
-        if (toAdd > 0) {
-            
-            // Evaluate all candidate children, using cached rhoV
-            vector<Candidate> candidates;
-
-            auto evalFeatureL = [&](pTree U, string a) {
-                if (U.rank < V.rank - 1) return;
-                for (int k : Poset[curIndx].under)
-                    if (U == Poset[k].Tree) return;
-
-                vector<oRho> ru = buildRhoVecL(U, V, rhoV, a);
-                float sum = 0;
-                for (int i = 0; i < B; i++)
-                    if (rhoV[i].rho - ru[i].rho > 0)
-                        sum++;
-                candidates.push_back({U, ru, sum / B});
-            };
-            
-            auto evalFeatureS = [&](pTree U, Split s) {
-                if (U.rank < V.rank - 1) return;
-                for (int k : Poset[curIndx].under)
-                    if (U == Poset[k].Tree) return;
-
-                vector<oRho> ru = buildRhoVecS(U, V, rhoV, s);
-                float sum = 0;
-                for (int i = 0; i < B; i++)
-                    if (rhoV[i].rho - ru[i].rho > 0)
-                        sum++;
-                candidates.push_back({U, ru, sum / B});
-            };
-
-            
-            //c out << "Evaluating candidates below \n"<< std::flush;
-            for (string a : V.leafSet)   evalFeatureL(V.Remove(a),a);
-            for (Split  s : V.intSplits) evalFeatureS(V.Remove(s),s);
-
-            // Sort by stability ascending: lowest stability first
-            sort(candidates.begin(), candidates.end(),
-                 [](const Candidate& a, const Candidate& b){
-                     return a.score < b.score; });
-
-            for (int t = 0; t < min(toAdd, (int)candidates.size()); t++)
-                insertChild(candidates[t].tree, candidates[t].rhoVec, curRank);
-        }
-
-        curIndx = Poset[curIndx].next;
-
-        // Finished all nodes at curRank: run kappa pass then step down
-        if (curIndx == -1) {
-
-            int scanIndx = firstRank[curRank];
-            while (scanIndx > -1) {
-                spNode& node = Poset[scanIndx];
-                if (node.over.empty()) {
-                    node.setKappa(Mt * (int)node.under.size());
-                } else {
-                    int maxKappa = 0;
-                    for (int k : node.over)
-                        maxKappa = max(maxKappa, Poset[k].kappa);
-                    node.setKappa(maxKappa * (int)node.under.size());
-                }
-                scanIndx = node.next;
-            }
-
-            curRank--;
-            //if (curRank > 1) {
-            //    firstRank[curRank - 1] = -1;
-            //    lastRank [curRank - 1] = -1;
-            //}
-            curIndx = firstRank[curRank];
-        }
-    }
-    // Kappa pass for rank 1
-    //c out << "Assigning kappa values \n"<< std::flush;
-    if (curRank == 1 && firstRank[1] > -1) {
-        int scanIndx = firstRank[1];
-        while (scanIndx > -1) {
-            spNode& node = Poset[scanIndx];
-            int maxKappa = 0;
-            for (int k : node.over)
-                maxKappa = max(maxKappa, Poset[k].kappa);
-            node.setKappa(maxKappa);
-            scanIndx = node.next;
-        }
-    }
-}
 
 
 subPoset::subPoset(vector<pTree> Sample, vector<int> nSample,
@@ -1077,7 +436,6 @@ subPoset::subPoset(vector<pTree> Sample, vector<int> nSample,
         vector<Candidate> candidates;
         candidates.reserve(above.size());
         
-        //c out << "Computing rhos for the first level in the poset \n"<< std::flush;
         for (const pTree& V : above) {
             vector<oRho> rv = buildRhoVec(V, emptyTree, rhoEmpty);
             float sc = computeScore(rhoEmpty, rv);
@@ -1095,7 +453,6 @@ subPoset::subPoset(vector<pTree> Sample, vector<int> nSample,
     timer.toc("Basic_firstlevel");
 
     // --- Beam search: ascend rank by rank until maxRnk ---
-    //c out << "We start searching upwards for best trees at max rank \n"<< std::flush;
     timer.tic("Basic_beamUpwards");
     while ((int)currentLevel[0].tree.rank < maxRnk) {
         
@@ -1128,7 +485,6 @@ subPoset::subPoset(vector<pTree> Sample, vector<int> nSample,
         }
         
         // Step B: Fill up with aboves, avoiding repetitions. We have a running indexes for each
-        //c out << "Fillin the next level with best candidates \n"<< std::flush;
         vector<int> tryIndx;
         
         tryIndx.assign(Mt, 0);
@@ -1279,7 +635,6 @@ subPoset::subPoset(vector<pTree> Sample, vector<int> nSample,
                 candidates.push_back({U, ru, sum / B});
             };
             
-            //c out << "Evaluating candidates below \n"<< std::flush;
             for (string a : V.leafSet)   evalFeatureL(V.Remove(a), a);
             for (Split  s : V.intSplits) evalFeatureS(V.Remove(s), s);
 
@@ -1294,32 +649,29 @@ subPoset::subPoset(vector<pTree> Sample, vector<int> nSample,
 
         curIndx = Poset[curIndx].next;
 
-        // Finished all nodes at curRank: run kappa pass then step down
+        // Finished all nodes at curRank: step down
         if (curIndx == -1) {
-
-            int scanIndx = firstRank[curRank];
-            while (scanIndx > -1) {
-                spNode& node = Poset[scanIndx];
-                if (node.over.empty()) {
-                    node.setKappa(Mt * (int)node.under.size());
-                } else {
-                    int maxKappa = 0;
-                    for (int k : node.over)
-                        maxKappa = max(maxKappa, Poset[k].kappa);
-                    node.setKappa(maxKappa * (int)node.under.size());
-                }
-                scanIndx = node.next;
-            }
-
             curRank--;
-            //if (curRank > 1) {
-            //    firstRank[curRank - 1] = -1;
-            //    lastRank [curRank - 1] = -1;
-            //}
             curIndx = firstRank[curRank];
         }
     }
     timer.toc("Basic_buildingDownwards");
+
+    // Zeta pass: for each node, zeta is the mean over its covers of the fraction
+    // of (weighted) treeSample1 trees whose rho strictly increases - the same
+    // definition the fixed-width / basic_score constructor uses. rhoCache[idx]
+    // already holds rho(node, Sample[i]), so we reuse it.
+    for (int idx = 0; idx < static_cast<int>(Poset.size()); idx++){
+        vector<pTree> covers = coverTrees(Poset[idx].Tree, compLeafSet);
+        float zSum = 0.0f;
+        int zCnt = 0;
+        for (const pTree& Tb : covers){
+            vector<oRho> rvb = buildRhoVec(Tb, Poset[idx].Tree, rhoCache[idx]);
+            zSum += computeScore(rhoCache[idx], rvb);
+            zCnt++;
+        }
+        Poset[idx].setZeta(zCnt > 0 ? zSum / zCnt : 0.0f);
+    }
 }
 
 // New builder:
@@ -1382,7 +734,6 @@ subPoset::subPoset(vector<pTree> Sample, vector<int> nSample,
             rv[i] = rho(T, TB, rhoBase[i], Sample[i]);
             //auto t1 = chrono::high_resolution_clock::now();
             //double totalBuildRho = chrono::duration<double, milli>(t1 - t0).count();
-            //c out << "          One takes" << totalBuildRho << " ms \n" << std::flush;
             //l ogFile << "          One takes" << totalBuildRho << " ms \n" << std::flush;
             
         }
@@ -1412,16 +763,13 @@ subPoset::subPoset(vector<pTree> Sample, vector<int> nSample,
         zetaCandRho.clear();
         zetaCandRho.reserve(nsamp);
         float zetaSum = 0.0f;
-        //c out << "    The nsamp = " << nsamp << "\n" << std::flush;
         //l ogFile << "    The nsamp = " << nsamp << "\n" << std::flush;
         for (int i = 0; i < nsamp; i++) {
-            //c out << "      For i = " << i << " the construction of rhoVec \n"<< std::flush;
             //l ogFile << "      For i = " << i << " the construction of rhoVec \n"<< std::flush;
             //auto t0 = chrono::high_resolution_clock::now();
             vector<oRho> rv = buildRhoVec(allCovers[i], ta.tree, ta.rhoVec);
             //auto t1 = chrono::high_resolution_clock::now();
             //double totalBuildRho = chrono::duration<double, milli>(t1 - t0).count();
-            //c out << "      it took " << totalBuildRho << " ms \n\n" << std::flush;
             //l ogFile << "      it took " << totalBuildRho << " ms \n\n" << std::flush;
             float cnt = 0;
             //auto t2 = chrono::high_resolution_clock::now();
@@ -1432,7 +780,6 @@ subPoset::subPoset(vector<pTree> Sample, vector<int> nSample,
             //auto t3 = chrono::high_resolution_clock::now();
             //double innerLoopT = chrono::duration<double, milli>(t3 - t2).count();
             zetaCandRho.push_back({i, rv});
-            //c out << "      And the final inner loop " << innerLoopT << " ms \n" << std::flush;
             //l ogFile << "      And the final inner loop " << innerLoopT << " ms \n" << std::flush;
         }
         return (nsamp > 0) ? zetaSum / nsamp : 0.0f;
@@ -1678,10 +1025,8 @@ subPoset::subPoset(vector<pTree> Sample, vector<int> nSample,
             pTree tbCopy = Tb;
             if (caveatBlocked(Tb)){
                 //if (taCopy.rank == 0){
-                    //c out << "For ta = empty and tb = " << mPhylo(tbCopy).toNewick() << " the tree was blocked by caveat \n" << flush;
                     //l ogFile << "For ta = empty and tb = " << mPhylo(tbCopy).toNewick() << " the tree was blocked by caveat \n" << flush;
                 //} else {
-                    //c out << "For ta = " << mPhylo(taCopy).toNewick() << " and tb = " << mPhylo(tbCopy).toNewick() << " the tree was blocked by caveat \n" << flush;
                     //l ogFile << "For ta = " << mPhylo(taCopy).toNewick() << " and tb = " << mPhylo(tbCopy).toNewick() << " the tree was blocked by caveat \n" << flush;
                 //}
                 
@@ -1706,39 +1051,28 @@ subPoset::subPoset(vector<pTree> Sample, vector<int> nSample,
             float thr = thresholdFn(zeta, nu, Tb.rank);
             
             //if (taCopy.rank == 0){
-                //c out << "For ta = empty and tb = "<< mPhylo(tbCopy).toNewick() << " the score was" << score << " and the threshold was "<< thr << "\n" << flush;
                 //l ogFile << "For ta = empty and tb = "<< mPhylo(tbCopy).toNewick() << " the score was" << score << " and the threshold was "<< thr << "\n" << flush;
             //}else {
-                //c out << "For ta = " << mPhylo(taCopy).toNewick() << " and tb = "<< mPhylo(tbCopy).toNewick() << " the score was" << score << " and the threshold was "<< thr << "\n" << flush;
                 //l ogFile << "For ta = " << mPhylo(taCopy).toNewick() << " and tb = "<< mPhylo(tbCopy).toNewick() << " the score was" << score << " and the threshold was "<< thr << "\n" << flush;
             //}
             
-            //c out << "   zeta = " << zeta << "\n" << flush;
             //l ogFile << "   zeta = " << zeta << "\n" << flush;
-            //c out << "   nu = " << nu << "\n" << flush;
             //l ogFile << "   nu = " << nu << "\n" << flush;
-            //c out << "   Tb.rank = " << Tb.rank << "\n" << flush;
             //l ogFile << "   Tb.rank = " << Tb.rank << "\n" << flush;
-            //c out << "   curMaxRnk = " << curMaxRnk << "\n" << flush;
             //l ogFile << "   curMaxRnk = " << curMaxRnk << "\n" << flush;
-            //c out << "   B = " << B << "\n" << flush;
             //l ogFile << "   B = " << B << "\n" << flush;
 
             if (score >= thr) {
                 // Accepted — estimate zeta for Tb and cache it
-                //c out << "Computing cover trees for tree with rank " << Tb.rank << "\n" << flush;
                 //l ogFile << "Computing cover trees for tree with rank " << Tb.rank << "\n" << flush;
                 vector<pTree> tbCovers = coverTrees(Tb, compLeafSet);
-                //c out << "It finished computing the cover trees, with a total of " << tbCovers.size() << "\n" << flush;
                 //l ogFile << "It finished computing the cover trees, with a total of " << tbCovers.size() << "\n" << flush;
                 
                 shuffle(tbCovers.begin(), tbCovers.end(), rng);
                 vector<pair<int,vector<oRho>>> tbZetaCandRho;
-                //c out << "Estimating zeta \n" << flush;
                 //l ogFile << "Estimating zeta \n" << flush;
                 float zetaTb = estimateZeta({Tb, rhoTb, tbIdx, 0.0f},
                                             tbCovers, tbZetaCandRho);
-                //c out << "Finished estimating zeta \n" << flush;
                 //l ogFile << "Finished estimating zeta \n" << flush;
                 zetaCache[tbIdx] = zetaTb;
                 tbEntry = {Tb, rhoTb, tbIdx, zetaTb};
@@ -1754,7 +1088,6 @@ subPoset::subPoset(vector<pTree> Sample, vector<int> nSample,
     // PHASE 1: Grow initial spine from empty tree upward
     // ---------------------------------------------------------------
     
-    //c out << "CHAIN CONSTRUCTION \n" << flush;
     timer.tic("Upwards_SpineFirstTree");
     vector<NodeEntry> chain;
 
@@ -1764,20 +1097,16 @@ subPoset::subPoset(vector<pTree> Sample, vector<int> nSample,
         oRho   baseORho = oRho(0, emptyLeaves);
         vector<oRho> rhoEmpty(N, baseORho);
         
-        //c out << "Computing cover trees for tree with rank 0 \n" << flush;
         //l ogFile << "Computing cover trees for tree with rank 0 \n" << flush;
         vector<pTree> rank1Trees = coverTrees(emptyTree, compLeafSet);
-        //c out << "It finished computing the cover trees, with a total of " << rank1Trees.size() << "\n" << flush;
         //l ogFile << "It finished computing the cover trees, with a total of " << rank1Trees.size() << "\n" << flush;
         shuffle(rank1Trees.begin(), rank1Trees.end(), rng);
 
         // Estimate zeta for empty tree using sample of rank-1 trees
         vector<pair<int,vector<oRho>>> zetaCandRho;
         NodeEntry emptyEntry = {emptyTree, rhoEmpty, -1, 0.0f};
-        //c out << "Estimating zeta \n" << flush;
         //l ogFile << "Estimating zeta \n" << flush;
         float zeta0 = estimateZeta(emptyEntry, rank1Trees, zetaCandRho);
-        //c out << "Finished estimating zeta \n" << flush;
         //l ogFile << "Finished estimating zeta \n" << flush;
         
 
@@ -1787,7 +1116,6 @@ subPoset::subPoset(vector<pTree> Sample, vector<int> nSample,
 
         NodeEntry tbEntry;
         if (!tryGrowUp(emptyEntry, rank1Trees, zeta0, zetaCandRho, tbEntry)) {
-            //c out << "No rank-1 tree passed the threshold. Poset is empty.\n" << flush;
             return;
         }
         chain.push_back(tbEntry);
@@ -1799,24 +1127,19 @@ subPoset::subPoset(vector<pTree> Sample, vector<int> nSample,
     while (chain.back().tree.rank < maxRnkAbs) {
         NodeEntry& ta = chain.back();
         
-        //c out << "Computing cover trees for tree with rank " << ta.tree.rank << "\n" << flush;
         //l ogFile << "Computing cover trees for tree with rank " << ta.tree.rank << "\n" << flush;
         vector<pTree> covers = coverTrees(ta.tree, compLeafSet);
-        //c out << "It finished computing the cover trees, with a total of " << covers.size() << "\n" << flush;
         //l ogFile << "It finished computing the cover trees, with a total of " << covers.size() << "\n" << flush;
         
         pTree taCopy  = ta.tree;
         if (covers.empty()){ 
-            //c out << "coverTrees Empty for " << mPhylo(taCopy).toNewick() << " \n" << flush;
             break;}
         shuffle(covers.begin(), covers.end(), rng);
 
         // Estimate zeta using sample (reuse rhoVecs for first ZETA_SAMPLE)
         vector<pair<int,vector<oRho>>> zetaCandRho;
-        //c out << "Estimating zeta \n" << flush;
         //l ogFile << "Estimating zeta \n" << flush;
         float zeta = estimateZeta(ta, covers, zetaCandRho);
-        //c out << "Finished estimating zeta \n" << flush;
         //l ogFile << "Finished estimating zeta \n" << flush;
         
         // Update cached zeta now that we have a better estimate
@@ -1831,14 +1154,12 @@ subPoset::subPoset(vector<pTree> Sample, vector<int> nSample,
         }
     }
     timer.toc("Upwards_SpineBuilding");
-    //c out << "Spine built. Length: " << chain.size() << "  curMaxRnk: " << curMaxRnk << "\n" << flush;
     //l ogFile << "Spine built. Length: " << chain.size() << "  curMaxRnk: " << curMaxRnk << "\n" << flush;
 
     // ---------------------------------------------------------------
     // PHASE 2: Backward bifurcation
     // ---------------------------------------------------------------
     
-    //c out << "BIFURCATION! \n" << flush; 
     //l ogFile << "BIFURCATION! \n" << flush; 
     timer.tic("Upwards_Phase2");
     for (int k = static_cast<int>(chain.size()) - 2; k >= 0; k--) {
@@ -1846,13 +1167,10 @@ subPoset::subPoset(vector<pTree> Sample, vector<int> nSample,
         const pTree* spineSucc = (k + 1 < static_cast<int>(chain.size()))
                                  ? &chain[k + 1].tree : nullptr;
 
-        //c out << "Bifurcating from spine node " << k << " (rank " << ta.tree.rank << ")\n" << flush;
         //l ogFile << "Bifurcating from spine node " << k << " (rank " << ta.tree.rank << ")\n" << flush;
         
-        //c out << "Computing cover trees for tree with rank " << ta.tree.rank << "\n" << flush;
         //l ogFile << "Computing cover trees for tree with rank " << ta.tree.rank << "\n" << flush;
         vector<pTree> covers = coverTrees(ta.tree, compLeafSet);
-        //c out << "It finished computing the cover trees, with a total of " << covers.size() << "\n" << flush;
         //l ogFile << "It finished computing the cover trees, with a total of " << covers.size() << "\n" << flush;
         
         if (covers.empty()) continue;
@@ -1873,10 +1191,8 @@ subPoset::subPoset(vector<pTree> Sample, vector<int> nSample,
         // (spine successor excluded). Small correction but avoids bias.
         vector<pair<int,vector<oRho>>> zetaCandRho;
         
-        //c out << "Estimating zeta \n" << flush;
         //l ogFile << "Estimating zeta \n" << flush;
         zeta = estimateZeta(ta, covers, zetaCandRho);
-        //c out << "Finished estimating zeta \n" << flush;
         //l ogFile << "Finished estimating zeta \n" << flush;
         
 
@@ -1907,25 +1223,20 @@ subPoset::subPoset(vector<pTree> Sample, vector<int> nSample,
 
             if (score >= thr && hasFullThresholdChain()) {
                 // Accepted — estimate zeta for Tb
-                //c out << "Computing cover trees for tree with rank " << Tb.rank << "\n" << flush;
                 //l ogFile << "Computing cover trees for tree with rank " << Tb.rank << "\n" << flush;
                 vector<pTree> tbCovers = coverTrees(Tb, compLeafSet);
-                //c out << "It finished computing the cover trees, with a total of " << tbCovers.size() << "\n" << flush;
                 //l ogFile << "It finished computing the cover trees, with a total of " << tbCovers.size() << "\n" << flush;
         
                 
                 shuffle(tbCovers.begin(), tbCovers.end(), rng);
                 vector<pair<int,vector<oRho>>> tbZetaCandRho;
-                //c out << "Estimating zeta \n" << flush;
                 //l ogFile << "Estimating zeta \n" << flush;
                 float zetaTb = estimateZeta({Tb, rhoTb, tbIdx, 0.0f},
                                             tbCovers, tbZetaCandRho);
-                //c out << "Finished estimating zeta \n" << flush;
                 //l ogFile << "Finished estimating zeta \n" << flush;
                 
                 zetaCache[tbIdx] = zetaTb;
 
-                //c out << "  Bifurcation accepted at rank " << Tb.rank << "\n" << flush;
                 //l ogFile << "  Bifurcation accepted at rank " << Tb.rank << "\n" << flush;
 
                 // Grow upward from Tb
@@ -1939,17 +1250,13 @@ subPoset::subPoset(vector<pTree> Sample, vector<int> nSample,
                                   curEntry.zeta, *curZetaCandRho, nextEntry)) {
                         curEntry = nextEntry;
                         // Rebuild covers for next iteration
-                        //c out << "Computing cover trees for tree with rank " << curEntry.tree.rank << "\n" << flush;
                         //l ogFile << "Computing cover trees for tree with rank " << curEntry.tree.rank << "\n" << flush;
                         tbCovers = coverTrees(curEntry.tree, compLeafSet);
-                        //c out << "It finished computing the cover trees, with a total of " << tbCovers.size() << "\n" << flush;
                         //l ogFile << "It finished computing the cover trees, with a total of " << tbCovers.size() << "\n" << flush; 
                         shuffle(tbCovers.begin(), tbCovers.end(), rng);
                         tbZetaCandRho.clear();
-                        //c out << "Estimating zeta \n" << flush;
                         //l ogFile << "Estimating zeta \n" << flush;
                         float zetaNext = estimateZeta(curEntry, tbCovers, tbZetaCandRho);
-                        //c out << "Finished estimating zeta \n" << flush;
                         //l ogFile << "Finished estimating zeta \n" << flush;
                         zetaCache[curEntry.posetIdx] = zetaNext;
                         curEntry.zeta = zetaNext;
@@ -1965,7 +1272,6 @@ subPoset::subPoset(vector<pTree> Sample, vector<int> nSample,
     }
     timer.toc("Upwards_Phase2");
 
-    //c out << "Bifurcation done. Poset size: " << Poset.size() << "\n" << flush;
     //l ogFile << "Bifurcation done. Poset size: " << Poset.size() << "\n" << flush;
 
     // ---------------------------------------------------------------
@@ -1994,7 +1300,6 @@ subPoset::subPoset(vector<pTree> Sample, vector<int> nSample,
         }
     }
     timer.toc("Upwards_SavingZeta");
-    //c out << "Constructive builder done. Poset size: " << Poset.size() << "\n" << flush;
     //l ogFile << "Constructive builder done. Poset size: " << Poset.size() << "\n" << flush;
 }
 
@@ -2030,8 +1335,7 @@ subPoset::subPoset(vector<pTree> Sample, vector<int> nSample,
 // Each node stores zeta = mean, over ALL of its covers, of
 // score(node -> cover). Because every cover of a node is enumerated while
 // the rank above it is filled, this is computed exactly there (no sampling);
-// nodes at the maximal rank have no covers and keep zeta = 0. This builder
-// does not run a kappa pass.
+// nodes at the maximal rank have no covers and keep zeta = 0.
 // ---------------------------------------------------------------------
 subPoset::subPoset(vector<pTree> Sample, vector<int> nSample,
                    set<string> compLeafSet,
@@ -2220,7 +1524,6 @@ void subPoset::print(){
     for (int j = 1; j < firstRank.size(); j++){
         int curIndx = firstRank.at(j);
         while (curIndx > -1){
-            //c out << "\n For node " << to_string(curIndx) << "\n"<< std::flush;
             Poset.at(curIndx).print();
             curIndx = Poset.at(curIndx).next;
         }
@@ -2335,16 +1638,13 @@ int64_t countMaximalChains(const subPoset& SP, const std::vector<bool>& desc,  /
                 if (!hasSurvivingEdge) {
                     // u is a sink in I(e): chain ends here
                     total += paths[u];
-                    //c out << "    For u = " << (u+1) << " the total is increasing by "<< paths[u] << "\n";
                 } else {
                     // Propagate to surviving over-neighbors
                     for (int w : SP.Poset[u].over) {
                         if (!anc[w]) {
                             if (paths[u] == 0){
-                                //c out << "    From u = " << (u+1) << " to w = " << (w+1) << " the total is increasing by only 1 \n";
                                 paths[w]++;
                             } else {
-                                //c out << "    From u = " << (u+1) << " to w = " << (w+1) << " the total is increasing by "<< paths[u] <<" \n";
                                 paths[w] += paths[u];}
                         }
                     }
@@ -2353,7 +1653,6 @@ int64_t countMaximalChains(const subPoset& SP, const std::vector<bool>& desc,  /
         }
     }
     
-    //c out << "SO the total is " << total << "\n \n";
     return total;
 }
 

@@ -14,7 +14,6 @@
 #' @param alpha Numeric value passed to Stable Search for stable threshold.
 #' @param q Numeric value used in FDR control purposes, used in the construction of the subPoset.
 #' @param tau Extra value for subposet building.
-#' @param summarized Boolean factor indicating if the function is to be runned with a summarized version of the sample
 #'
 #' @return Output of nullCoveringProb
 #' @export
@@ -24,8 +23,7 @@ run_nullCovering_prob <- function(tstar_newick = NULL, newicks = NULL, newicks1 
                                   tstar_file = NULL, file = NULL, file1 = NULL, file2 = NULL, 
                                   n1 = NULL, n2 = NULL,
                                   random_subsampling = FALSE,
-                                  alpha = 0.85, q = 0.1, tau = 0.95, 
-                                  summarized = FALSE) {
+                                  alpha = 0.85, q = 0.1, tau = 0.95) {
   
   ## --- Argument validation -------------------------------------------------
   
@@ -187,70 +185,57 @@ run_nullCovering_prob <- function(tstar_newick = NULL, newicks = NULL, newicks1 
   completeLeaveSet <- unique(unlist(lapply(c(trees1,trees2), function(x) x$tip.label)))
   
   ## --- Preparing to run the final function -----------------------------------
-  if(summarized){
-    ## --- Joining trees that are identical if summarized = TRUE --------------
-    Unique_trees1 = list()
-    Count_trees1 = c()
-    
-    Unique_trees2 = list()
-    Count_trees2 = c()
-    
-    for (tree in trees1){
-      Found = FALSE;
-      i = 0;
-      for (Top in Unique_trees1) {
-        i = i+1
-        if (all.equal(tree, Top)){
-          Found = TRUE;
-          Count_trees1[i] = Count_trees1[i] + 1;
-          break
-        }
-      }
-      if (!Found){
-        Unique_trees1[[length(Unique_trees1)+1]] = tree;
-        Count_trees1 = c(Count_trees1, 1);
+  ## --- Joining trees that are identical -----------------------------------
+  Unique_trees1 = list()
+  Count_trees1 = c()
+
+  Unique_trees2 = list()
+  Count_trees2 = c()
+
+  for (tree in trees1){
+    Found = FALSE;
+    i = 0;
+    for (Top in Unique_trees1) {
+      i = i+1
+      if (all.equal(tree, Top)){
+        Found = TRUE;
+        Count_trees1[i] = Count_trees1[i] + 1;
+        break
       }
     }
-    
-    for (tree in trees2){
-      Found = FALSE;
-      i = 0;
-      for (Top in Unique_trees2) {
-        i = i+1
-        if (all.equal(tree, Top)){
-          Found = TRUE;
-          Count_trees2[i] = Count_trees2[i] + 1;
-          break
-        }
-      }
-      if (!Found){
-        Unique_trees2[[length(Unique_trees2)+1]] = tree;
-        Count_trees2 = c(Count_trees2, 1);
-      }
+    if (!Found){
+      Unique_trees1[[length(Unique_trees1)+1]] = tree;
+      Count_trees1 = c(Count_trees1, 1);
     }
-    
-    ## --- Write cleaned trees back to Newick strings ---------------------------
-    cleaned_newicks1 <- vapply(Unique_trees1, ape::write.tree, FUN.VALUE = character(1))
-    cleaned_newicks2 <- vapply(Unique_trees2, ape::write.tree, FUN.VALUE = character(1))
-    
-    ## --- Call your Rcpp backend ----------------------------------------------
-    res <-  nullCoveringProbComputationS(treeStar = cleaned_treeStar,
-                               treeSample1R = cleaned_newicks1, nSample1R = Count_trees1, 
-                               treeSample2R = cleaned_newicks2, nSample2R = Count_trees2, 
-                               compLeafSetR = completeLeaveSet, 
-                               alphaR = alpha, qR = q, tauR = tau, B2 = n2)
-  } else {
-    ## --- Write cleaned trees back to Newick strings ---------------------------
-    cleaned_newicks1 <- vapply(trees1, ape::write.tree, FUN.VALUE = character(1))
-    cleaned_newicks2 <- vapply(trees2, ape::write.tree, FUN.VALUE = character(1))
-    
-    ## --- Call your Rcpp backend ----------------------------------------------
-    res <- nullCoveringProbComputation(treeStar = cleaned_treeStar,
-                              treeSample1R = cleaned_newicks1, 
-                              treeSample2R = cleaned_newicks2,
-                              compLeafSetR = completeLeaveSet, 
-                              alphaR = alpha, qR = q, tauR = tau, B2 = n2)
   }
+
+  for (tree in trees2){
+    Found = FALSE;
+    i = 0;
+    for (Top in Unique_trees2) {
+      i = i+1
+      if (all.equal(tree, Top)){
+        Found = TRUE;
+        Count_trees2[i] = Count_trees2[i] + 1;
+        break
+      }
+    }
+    if (!Found){
+      Unique_trees2[[length(Unique_trees2)+1]] = tree;
+      Count_trees2 = c(Count_trees2, 1);
+    }
+  }
+
+  ## --- Write cleaned trees back to Newick strings ---------------------------
+  cleaned_newicks1 <- vapply(Unique_trees1, ape::write.tree, FUN.VALUE = character(1))
+  cleaned_newicks2 <- vapply(Unique_trees2, ape::write.tree, FUN.VALUE = character(1))
+
+  ## --- Call your Rcpp backend ----------------------------------------------
+  res <-  nullCoveringProbComputationS(treeStar = cleaned_treeStar,
+                             treeSample1R = cleaned_newicks1, nSample1R = Count_trees1,
+                             treeSample2R = cleaned_newicks2, nSample2R = Count_trees2,
+                             compLeafSetR = completeLeaveSet,
+                             alphaR = alpha, qR = q, tauR = tau, B2 = n2)
   
   return(res)
 }

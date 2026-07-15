@@ -13,10 +13,13 @@ run_subPostAnalysis(
   file1 = NULL,
   file2 = NULL,
   bfile = NULL,
+  SPbuilder = "stability",
   alpha = 0.85,
   q = 0.1,
-  tau = 0.95,
-  summarized = FALSE
+  tau = 0.8,
+  Mt = 1,
+  rb = NULL,
+  delta = NULL
 )
 }
 \arguments{
@@ -36,13 +39,17 @@ run_subPostAnalysis(
 
 \item{bfile}{Path to a file containing Newick trees for probability computation (optional)}
 
-\item{alpha}{Numeric value passed to Stable Search for stable threshold.}
+\item{SPbuilder}{String indication what method to use to build subposet.}
 
-\item{q}{Numeric value used in FDR control purposes, used in the construction of the subPoset.}
+\item{alpha}{Numeric value passed to Stable Search for stable threshold. (in stability-based SubPoset)}
 
-\item{tau}{Extra value for subposet building.}
+\item{q}{Numeric value used in FDR control purposes, used in the construction of the subPoset in stability-based subposet}
 
-\item{summarized}{Boolean factor indicating if the function is to be runned with a summarized version of the sample}
+\item{tau}{Extra value for subposet building in stability-based subposet}
+
+\item{Mt}{Number of maximal trees for basic-bifurcation subposet building}
+
+\item{rb}{Anchor rank for basic-bifurcation subposet building}
 }
 \value{
 Output of SPAnalysisR

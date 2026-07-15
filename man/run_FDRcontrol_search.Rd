@@ -12,11 +12,17 @@ run_FDRcontrol_search(
   file1 = NULL,
   file2 = NULL,
   n1 = NULL,
-  random_subsampling = FALSE,
-  alpha = 0.85,
   q = 0.1,
-  tau = 0.95,
-  summarized = FALSE
+  random_subsampling = FALSE,
+  SPbuilder = "basic_score",
+  top_width = NULL,
+  bottom_width = 1,
+  orientation = "upwards",
+  alpha = 0.85,
+  q0 = 0.5,
+  tau = 0.8,
+  Mt = 1,
+  rb = NULL
 )
 }
 \arguments{
@@ -34,18 +40,30 @@ run_FDRcontrol_search(
 
 \item{n1}{Number of trees to be used for Stable Search (optional)}
 
+\item{q}{Numeric value passed to FDR control purposes.}
+
 \item{random_subsampling}{Boolean indicating if the subsampling is to be made random}
+
+\item{SPbuilder}{String indication what method to use to build subposet.}
+
+\item{top_width}{Number of trees of maximal rank for the subposet building}
+
+\item{bottom_width}{Number of trees of rank 1 for the subposet building}
+
+\item{orientation}{Orientation for the building of the subposet}
 
 \item{alpha}{Numeric value passed to Stable Search for stable threshold.}
 
-\item{q}{Numeric value passed to FDR control purposes.}
+\item{q0}{Numeric value passed to subposet building process when building upwards (optional)}
 
 \item{tau}{Extra value for subposet building.}
 
-\item{summarized}{Boolean factor indicating if the function is to be runned with a summarized version of the sample}
+\item{Mt}{Number of maximal trees for basic-bifurcation subposet building}
+
+\item{rb}{Anchor rank for basic-bifurcation subposet building}
 }
 \value{
-Output of completeSearchRcpp
+A length-1 character vector: the Newick string of the FDR-controlled tree
 }
 \description{
 Run FDR controled search

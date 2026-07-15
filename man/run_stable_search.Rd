@@ -4,7 +4,7 @@
 \alias{run_stable_search}
 \title{Run stable search}
 \usage{
-run_stable_search(newicks = NULL, file = NULL, alpha, summarized = FALSE)
+run_stable_search(newicks = NULL, file = NULL, alpha)
 }
 \arguments{
 \item{newicks}{Character vector of Newick strings (optional)}
@@ -12,8 +12,6 @@ run_stable_search(newicks = NULL, file = NULL, alpha, summarized = FALSE)
 \item{file}{Path to a file containing Newick trees (optional)}
 
 \item{alpha}{Numeric value passed to stableSearchRcpp}
-
-\item{summarized}{Boolean factor indicating if the function is to be runned with a summarized version of the sample}
 }
 \value{
 Output of stableSearchRcpp

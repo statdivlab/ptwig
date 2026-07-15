@@ -9,8 +9,6 @@
 #' @param tree_file Path to a file containing a single Newick tree `V` (optional).
 #' @param sample_newicks Character vector of Newick strings for the tree sample (optional).
 #' @param sample_file Path to a file containing the tree sample (optional).
-#' @param summarized Logical; if TRUE, identical trees in the sample are collapsed
-#'   and counted (faster for samples with repeated topologies).
 #'
 #' @return A data.frame with columns `feature` (leaf name as a string, or the
 #'   split printed with `{side1|side2}`), `type` (`"leaf"` or `"split"`) and
@@ -19,8 +17,7 @@
 #'
 #' @importFrom ape read.tree write.tree
 run_compute_stability <- function(tree_newick = NULL, tree_file = NULL,
-                                  sample_newicks = NULL, sample_file = NULL,
-                                  summarized = FALSE) {
+                                  sample_newicks = NULL, sample_file = NULL) {
 
   ## --- Argument validation -------------------------------------------------
   if (is.null(tree_newick) && is.null(tree_file)) {
@@ -71,37 +68,31 @@ run_compute_stability <- function(tree_newick = NULL, tree_file = NULL,
   trees <- lapply(trees, normalize)
 
   ## --- Compute stability ---------------------------------------------------
-  if (summarized) {
-    ## --- Collapse identical trees, counting multiplicities -----------------
-    Unique_trees <- list()
-    Count_trees <- c()
+  ## --- Collapse identical trees, counting multiplicities -------------------
+  Unique_trees <- list()
+  Count_trees <- c()
 
-    for (tree in trees) {
-      Found <- FALSE
-      i <- 0
-      for (Top in Unique_trees) {
-        i <- i + 1
-        if (isTRUE(all.equal(tree, Top))) {
-          Found <- TRUE
-          Count_trees[i] <- Count_trees[i] + 1
-          break
-        }
-      }
-      if (!Found) {
-        Unique_trees[[length(Unique_trees) + 1]] <- tree
-        Count_trees <- c(Count_trees, 1)
+  for (tree in trees) {
+    Found <- FALSE
+    i <- 0
+    for (Top in Unique_trees) {
+      i <- i + 1
+      if (isTRUE(all.equal(tree, Top))) {
+        Found <- TRUE
+        Count_trees[i] <- Count_trees[i] + 1
+        break
       }
     }
-
-    sample_clean <- vapply(Unique_trees, ape::write.tree, FUN.VALUE = character(1))
-    res <- computeStabilityRcppS(treeR = tree_clean,
-                                 treeSampleR = sample_clean,
-                                 nSampleR = Count_trees)
-  } else {
-    sample_clean <- vapply(trees, ape::write.tree, FUN.VALUE = character(1))
-    res <- computeStabilityRcpp(treeR = tree_clean,
-                                treeSampleR = sample_clean)
+    if (!Found) {
+      Unique_trees[[length(Unique_trees) + 1]] <- tree
+      Count_trees <- c(Count_trees, 1)
+    }
   }
+
+  sample_clean <- vapply(Unique_trees, ape::write.tree, FUN.VALUE = character(1))
+  res <- computeStabilityRcppS(treeR = tree_clean,
+                               treeSampleR = sample_clean,
+                               nSampleR = Count_trees)
 
   return(res)
 }

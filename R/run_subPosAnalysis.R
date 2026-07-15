@@ -14,7 +14,6 @@
 #' @param tau Extra value for subposet building in stability-based subposet
 #' @param Mt Number of maximal trees for basic-bifurcation subposet building
 #' @param rb Anchor rank for basic-bifurcation subposet building
-#' @param summarized Boolean factor indicating if the function is to be runned with a summarized version of the sample
 #'
 #' @return Output of SPAnalysisR
 #' @export
@@ -24,8 +23,7 @@ run_subPostAnalysis <- function(tstar_newick = NULL, newicks1 = NULL, newicks2 =
                                   tstar_file = NULL, file1 = NULL, file2 = NULL, bfile = NULL,
                                   SPbuilder = "stability",
                                   alpha = 0.85, q = 0.1, tau = 0.80,
-                                  Mt = 1, rb = NULL, delta = NULL, 
-                                  summarized = FALSE) {
+                                  Mt = 1, rb = NULL, delta = NULL) {
   
   ## --- Argument validation -------------------------------------------------
   
@@ -172,120 +170,91 @@ run_subPostAnalysis <- function(tstar_newick = NULL, newicks1 = NULL, newicks2 =
   completeLeaveSet <- unique(unlist(lapply(c(trees1,trees2,btrees), function(x) x$tip.label)))
   
   ## --- Preparing to run the final function -----------------------------------
-  if(summarized){
-    ## --- Joining trees that are identical if summarized = TRUE --------------
-    Unique_trees1 = list()
-    Count_trees1 = c()
-    
-    Unique_trees2 = list()
-    Count_trees2 = c()
-    
-    Unique_btrees = list()
-    Count_btrees = c()
-    
-    for (tree in trees1){
-      Found = FALSE;
-      i = 0;
-      for (Top in Unique_trees1) {
-        i = i+1
-        if (all.equal(tree, Top)){
-          Found = TRUE;
-          Count_trees1[i] = Count_trees1[i] + 1;
-          break
-        }
-      }
-      if (!Found){
-        Unique_trees1[[length(Unique_trees1)+1]] = tree;
-        Count_trees1 = c(Count_trees1, 1);
+  ## --- Joining trees that are identical -----------------------------------
+  Unique_trees1 = list()
+  Count_trees1 = c()
+
+  Unique_trees2 = list()
+  Count_trees2 = c()
+
+  Unique_btrees = list()
+  Count_btrees = c()
+
+  for (tree in trees1){
+    Found = FALSE;
+    i = 0;
+    for (Top in Unique_trees1) {
+      i = i+1
+      if (all.equal(tree, Top)){
+        Found = TRUE;
+        Count_trees1[i] = Count_trees1[i] + 1;
+        break
       }
     }
-    
-    for (tree in btrees){
-      Found = FALSE;
-      i = 0;
-      for (Top in Unique_btrees) {
-        i = i+1
-        if (all.equal(tree, Top)){
-          Found = TRUE;
-          Count_btrees[i] = Count_btrees[i] + 1;
-          break
-        }
-      }
-      if (!Found){
-        Unique_btrees[[length(Unique_btrees)+1]] = tree;
-        Count_btrees = c(Count_btrees, 1);
+    if (!Found){
+      Unique_trees1[[length(Unique_trees1)+1]] = tree;
+      Count_trees1 = c(Count_trees1, 1);
+    }
+  }
+
+  for (tree in btrees){
+    Found = FALSE;
+    i = 0;
+    for (Top in Unique_btrees) {
+      i = i+1
+      if (all.equal(tree, Top)){
+        Found = TRUE;
+        Count_btrees[i] = Count_btrees[i] + 1;
+        break
       }
     }
-    
-    for (tree in trees2){
-      Found = FALSE;
-      i = 0;
-      for (Top in Unique_trees2) {
-        i = i+1
-        if (all.equal(tree, Top)){
-          Found = TRUE;
-          Count_trees2[i] = Count_trees2[i] + 1;
-          break
-        }
-      }
-      if (!Found){
-        Unique_trees2[[length(Unique_trees2)+1]] = tree;
-        Count_trees2 = c(Count_trees2, 1);
+    if (!Found){
+      Unique_btrees[[length(Unique_btrees)+1]] = tree;
+      Count_btrees = c(Count_btrees, 1);
+    }
+  }
+
+  for (tree in trees2){
+    Found = FALSE;
+    i = 0;
+    for (Top in Unique_trees2) {
+      i = i+1
+      if (all.equal(tree, Top)){
+        Found = TRUE;
+        Count_trees2[i] = Count_trees2[i] + 1;
+        break
       }
     }
-    
-    ## --- Write cleaned trees back to Newick strings ---------------------------
-    cleaned_newicks1 <- vapply(Unique_trees1, ape::write.tree, FUN.VALUE = character(1))
-    cleaned_newicks2 <- vapply(Unique_trees2, ape::write.tree, FUN.VALUE = character(1))
-    cleaned_newicksb <- vapply(Unique_btrees, ape::write.tree, FUN.VALUE = character(1))
-    
-    ## --- Call your Rcpp backend ----------------------------------------------
-    if (SPbuilder == "stability"){
-      res <-  SPAnalysisRS(treeStar = cleaned_treeStar,
-                           treeSample1R = cleaned_newicks1, nSample1R = Count_trees1,
-                           treeSample2R = cleaned_newicks2, nSample2R = Count_trees2,
-                           bigTreeSampleR = cleaned_newicksb, nBSampleR = Count_btrees,
-                           compLeafSetR = completeLeaveSet,
-                           alphaR = alpha, qR = q, tauR = tau, deltaR = delta)
-    } else if (SPbuilder == "basic") {
-      if (is.null(rb)){
-        rb = length(completeLeaveSet) - 4;
-      }
-      
-      res <-  SPAnalysisR2S(treeStar = cleaned_treeStar,
-                    treeSample1R = cleaned_newicks1, nSample1R = Count_trees1,
-                    treeSample2R = cleaned_newicks2, nSample2R = Count_trees2,
-                    bigTreeSampleR = cleaned_newicksb, nBSampleR = Count_btrees,
-                    compLeafSetR = completeLeaveSet,
-                    MtR = Mt, rbR = rb, qR = q, deltaR = delta)
+    if (!Found){
+      Unique_trees2[[length(Unique_trees2)+1]] = tree;
+      Count_trees2 = c(Count_trees2, 1);
     }
-   
-  } else {
-    ## --- Write cleaned trees back to Newick strings ---------------------------
-    cleaned_newicks1 <- vapply(trees1, ape::write.tree, FUN.VALUE = character(1))
-    cleaned_newicks2 <- vapply(trees2, ape::write.tree, FUN.VALUE = character(1))
-    cleaned_newicksb <- vapply(btrees, ape::write.tree, FUN.VALUE = character(1))
-    
-    ## --- Call your Rcpp backend ----------------------------------------------
-    if (SPbuilder == "stability"){
-      res <-  SPAnalysisR(treeStar = cleaned_treeStar,
-                           treeSample1R = cleaned_newicks1, 
-                           treeSample2R = cleaned_newicks2, 
-                           bigTreeSampleR = cleaned_newicksb, 
-                           compLeafSetR = completeLeaveSet,
-                           alphaR = alpha, qR = q, tauR = tau, deltaR = delta)
-    } else if (SPbuilder == "basic") {
-      if (is.null(rb)){
-        rb = length(completeLeaveSet) - 4;
-      }
-      
-      res <-  SPAnalysisR2(treeStar = cleaned_treeStar,
-                            treeSample1R = cleaned_newicks1, 
-                            treeSample2R = cleaned_newicks2,
-                            bigTreeSampleR = cleaned_newicksb, 
-                            compLeafSetR = completeLeaveSet,
-                            MtR = Mt, rbR = rb, qR = q, deltaR = delta)
+  }
+
+  ## --- Write cleaned trees back to Newick strings ---------------------------
+  cleaned_newicks1 <- vapply(Unique_trees1, ape::write.tree, FUN.VALUE = character(1))
+  cleaned_newicks2 <- vapply(Unique_trees2, ape::write.tree, FUN.VALUE = character(1))
+  cleaned_newicksb <- vapply(Unique_btrees, ape::write.tree, FUN.VALUE = character(1))
+
+  ## --- Call your Rcpp backend ----------------------------------------------
+  if (SPbuilder == "stability"){
+    res <-  SPAnalysisRS(treeStar = cleaned_treeStar,
+                         treeSample1R = cleaned_newicks1, nSample1R = Count_trees1,
+                         treeSample2R = cleaned_newicks2, nSample2R = Count_trees2,
+                         bigTreeSampleR = cleaned_newicksb, nBSampleR = Count_btrees,
+                         compLeafSetR = completeLeaveSet,
+                         alphaR = alpha, qR = q, tauR = tau, deltaR = delta)
+  } else if (SPbuilder == "basic") {
+    if (is.null(rb)){
+      rb = length(completeLeaveSet) - 4;
     }
+
+    res <-  SPAnalysisR2S(treeStar = cleaned_treeStar,
+                  treeSample1R = cleaned_newicks1, nSample1R = Count_trees1,
+                  treeSample2R = cleaned_newicks2, nSample2R = Count_trees2,
+                  bigTreeSampleR = cleaned_newicksb, nBSampleR = Count_btrees,
+                  compLeafSetR = completeLeaveSet,
+                  MtR = Mt, rbR = rb, qR = q, deltaR = delta)
   }
   
   return(res)

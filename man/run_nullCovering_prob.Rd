@@ -18,8 +18,7 @@ run_nullCovering_prob(
   random_subsampling = FALSE,
   alpha = 0.85,
   q = 0.1,
-  tau = 0.95,
-  summarized = FALSE
+  tau = 0.95
 )
 }
 \arguments{
@@ -50,8 +49,6 @@ run_nullCovering_prob(
 \item{q}{Numeric value used in FDR control purposes, used in the construction of the subPoset.}
 
 \item{tau}{Extra value for subposet building.}
-
-\item{summarized}{Boolean factor indicating if the function is to be runned with a summarized version of the sample}
 }
 \value{
 Output of nullCoveringProb

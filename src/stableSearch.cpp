@@ -614,51 +614,6 @@ vector<pTree> stableSearch(vector<pTree> treeSample, vector<int> nSample, set<st
     
 }
 
-// [[Rcpp::export]]
-CharacterVector stableSearchRcpp(CharacterVector treeSampleR,
-                                 CharacterVector compLeafSetR,
-                                 double alphaR) {
-    //
-    // 1. Convert treeSampleR → vector<pTree>
-    //
-    std::vector<pTree> treeSample;
-    treeSample.reserve(treeSampleR.size());
-
-    for (int i = 0; i < treeSampleR.size(); i++) {
-        if (treeSampleR[i] == NA_STRING)
-            stop("treeSample cannot contain NA.");
-        treeSample.emplace_back(
-            pTree(as<std::string>(treeSampleR[i]))
-        );
-    }
-
-    //
-    // 2. Convert compLeafSetR → set<string>
-    //
-    std::set<std::string> compLeafSet;
-    for (int i = 0; i < compLeafSetR.size(); i++) {
-        if (compLeafSetR[i] == NA_STRING)
-            stop("compLeafSet cannot contain NA.");
-        compLeafSet.insert(as<std::string>(compLeafSetR[i]));
-    }
-
-    //
-    // 3. Call C++ function
-    //
-    float alpha = static_cast<float>(alphaR);
-    std::vector<pTree> result = stableSearch(treeSample, compLeafSet, alpha);
-
-    //
-    // 4. Convert vector<pTree> → CharacterVector
-    //
-    CharacterVector out(result.size());
-    for (size_t i = 0; i < result.size(); i++) {
-        mPhylo rP = mPhylo(result[i]);
-        out[i] = rP.toNewick();
-    }
-
-    return out;
-}
 
 // Build the vector<pTree> sample from a CharacterVector of Newick strings.
 static std::vector<pTree> buildTreeSample(CharacterVector treeSampleR) {
@@ -672,54 +627,6 @@ static std::vector<pTree> buildTreeSample(CharacterVector treeSampleR) {
     return treeSample;
 }
 
-// [[Rcpp::export]]
-DataFrame computeStabilityRcpp(CharacterVector treeR,
-                               CharacterVector treeSampleR) {
-    //
-    // 1. Build the tree V
-    //
-    if (treeR.size() != 1 || treeR[0] == NA_STRING)
-        stop("treeR must be a single non-NA Newick string.");
-    pTree V = pTree(as<std::string>(treeR[0]));
-
-    //
-    // 2. Build the tree sample
-    //
-    std::vector<pTree> treeSample = buildTreeSample(treeSampleR);
-    int K = static_cast<int>(treeSample.size());
-
-    //
-    // 3. Precompute rhoV = rho(V, Z) for every tree Z in the sample
-    //
-    std::vector<float> rhoV(K);
-    for (int i = 0; i < K; i++)
-        rhoV[i] = static_cast<float>(rho(V, treeSample[i]));
-
-    //
-    // 4. Stability of every leaf and every internal split of V
-    //
-    std::vector<std::string> features;
-    std::vector<std::string> types;
-    std::vector<double>      stabilities;
-
-    for (const std::string& a : V.leafSet) {
-        features.push_back(a);
-        types.push_back("leaf");
-        stabilities.push_back(Stability(treeSample, V, a, rhoV, K));
-    }
-    for (const Split& s : V.intSplits) {
-        features.push_back(s.printSt());
-        types.push_back("split");
-        stabilities.push_back(Stability(treeSample, V, s, rhoV, K));
-    }
-
-    return DataFrame::create(
-        _["feature"]          = features,
-        _["type"]             = types,
-        _["stability"]        = stabilities,
-        _["stringsAsFactors"] = false
-    );
-}
 
 // [[Rcpp::export]]
 DataFrame computeStabilityRcppS(CharacterVector treeR,
