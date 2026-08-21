@@ -1,0 +1,53 @@
+[workspace]
+name = "msa-to-single-gene"
+version = "0.1.0"
+description = "Recover single-gene MSAs from a concatenated supermatrix using HMMs"
+channels = ["conda-forge", "bioconda"]
+platforms = ["linux-64", "osx-64", "osx-arm64"]
+
+## AW goal: Given single gene alignments for a subset of organisms in gene_alignments, 
+##  and a MSA in s97.msa.fa, train HMMs on the single gene alignments, 
+##  find them in the MSA, then estimate gene trees for them. 
+
+[dependencies]
+python = ">=3.10,<3.13"
+biopython = "*"
+hmmer = ">=3.3"
+iqtree = ">=3.0.0"
+
+[tasks]
+# Run any single step with: pixi run <task>
+# Layout: input/ = given data, scripts/ = code, work/ = intermediates, output/ = deliverables
+
+# 0) Prep: gapped supermatrix -> ungapped FASTA + per-taxon column maps
+prep = "python scripts/00_prep_supermatrix_to_ungapped.py input/s97.msa.fa work"
+
+# 1) Build one HMM per seed gene alignment
+build-hmms = "bash scripts/01_build_hmms.sh input/gene_alignments work/hmms"
+
+# 2) Search the ungapped supermatrix with every gene HMM
+hmmsearch-all = "bash scripts/02_hmmsearch_all.sh work/hmms work/supermatrix.ungapped.fasta work/hmmsearch"
+
+# 3) Call consensus column blocks -> work/consensus.partitions.txt
+call-blocks = "python scripts/03_call_gene_blocks.py work/hmmsearch work/maps work/consensus 0.4"
+
+# 4) Slice the supermatrix into per-gene MSAs
+extract = "python scripts/04_extract_gene_alignments.py input/s97.msa.fa work/consensus.partitions.txt work/gene_alignments_all"
+
+# 5) Subset each gene MSA to the chosen organisms
+subset = "python scripts/05_subset_alignments.py work/gene_alignments_all input/chosen_orgs.txt work/gene_alignments_subset --strip-after-space --min-seqs 2"
+
+# 6) Estimate a gene tree per subset alignment
+iqtree-batch = "python scripts/06_run_iqtree.py work/gene_alignments_subset work/trees --boot 1000 --alrt 1000 --model MFP --threads AUTO --seed 12345 --redo"
+
+# 7) Collect the gene trees into the deliverable folder
+collect-trees = "sh -c 'mkdir -p output/final_trees && cp work/trees/*.treefile output/final_trees/'"
+
+# Steps 0-4: recover per-gene alignments from the supermatrix
+alignments = "sh -c 'pixi run prep && pixi run build-hmms && pixi run hmmsearch-all && pixi run call-blocks && pixi run extract'"
+
+# Steps 0-7: the whole pipeline, input/ -> output/final_trees
+all = "sh -c 'pixi run alignments && pixi run subset && pixi run iqtree-batch && pixi run collect-trees'"
+
+# Remove all generated output; input/ and scripts/ are untouched
+clean = "rm -rf work output"
