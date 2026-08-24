@@ -1,4 +1,4 @@
-As detailed in the preprint, Zhang et al made their multiple sequence alignment available, but not individual alignments nor individual gene trees. Note that the gene trees that they made available do not include the Eukarya, which are essential to our analysis. 
+As detailed in the preprint, Zhang et al made their multiple sequence alignment available, but not individual alignments nor individual gene trees that include the Eukarya. There are, however, alignments and gene trees for the Archaea. Therefore, we used the archaeal alignments to train HMMs to detect these genes in the eukaryotic genomes, then re-aligned and re-estimated gene trees to obtain trees that include both archaeal and eukaryotic organisms. 
 
 This directory contains scripts to estimate those trees. There are a number of steps. We use pixi to organize the `scripts` using only the `input` data. You will need to install pixi to reproduce this. (And you should! pixi is awesome and a billion times better than conda!!)
 
@@ -104,13 +104,9 @@ they are recovered by search rather than by bookkeeping.
   2 Pfam, 2 TIGRFAM, 1 COG.
 - Step 0 writes one map file per taxon and step 2 writes full HMMER output, so
   `work/` grows to roughly 140 MB. It is safe to delete after `output/` exists.
-- **The provenance of `input/gene_alignments/` is not recorded here and must be
-  supplied.** These 97 seed alignments are an input, generated upstream of this
-  repository: the `.trimmed.` infix implies an alignment-trimming step, and the
-  headers (`<taxon>@<contig accession>_<gene index>`) come from a genome
-  annotation and marker-extraction step. Neither is reproduced by any script in
-  `scripts/`. They are also distinct from `work/gene_alignments_all/`, which
-  holds the per-gene alignments recovered *from* the supermatrix in step 4.
+- The files in `input/gene_alignments/` came from `2. phylogenome files/2.S97/1.individual markers files/2.remove paralogs/<gene>.files/<gene>.trimmed.faa` in Zhang et al's supplementary data. 
+- Similarly, `input/s97.msa.fa` came from `2. phylogenome files/2.S97/2.concatenated files`.
+- `input/chosen_orgs.txt` was chosen by me (Amy) to balance having an interesting and well-motivated data analysis with the computational intensity of our consensus tree estimation method.  
 - The seeds and the supermatrix do not sample the same taxa. The seeds cover 579
   taxa and the supermatrix 425, with 410 in common. The 169 seed-only taxa are
   non-Asgard archaeal outgroups (Thermoproteia, Thermoplasmata, Nitrososphaeria,
